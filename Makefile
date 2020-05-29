@@ -1,31 +1,49 @@
-CC = g++
-LDFLAGS =
-CXXFLAGS = -Wall
-CPPFLAGS = 
-INCLUDES = -I./src/third_party/tclap-1.2.2/include -I./src/common/include
-LIBS = 
-SOURCEDIR := .
-SOURCE := src/lz77/main.cpp src/common/src/LZ77.cpp src/common/src/BitBarrel.cpp src/common/src/BitBarrelWriter.cpp
-OBJ = $(SOURCE:.cpp=.o)
-EXEC = lz77
+CC         := g++
+LD         := g++
 
-DEBUG=no
-ifeq ($(DEBUG),yes)
-    CXXFLAGS += -g
-endif
+MODULES    := common lz77
+SRCDIR     := src
+BUILDDIR   := build
+BINDIR     := bin
+SRC_DIRS   := $(addprefix $(SRCDIR)/,$(MODULES))
+BUILD_DIRS := $(addprefix $(BUILDDIR)/,$(MODULES))
+INC_DIRS   := third_party/tclap-1.2.2/include/
+EXECS      := lz77
+INCS       := $(SRC_DIRS) $(addsuffix /include,$(SRC_DIRS)) $(addprefix $(SRCDIR)/,$(INC_DIRS))
 
-.PHONY: depend clean
+SRC       := $(foreach sdir,$(SRC_DIRS),$(wildcard $(sdir)/*.cpp))
+SRC       += $(foreach sdir,$(SRC_DIRS),$(wildcard $(sdir)/src/*.cpp))
+OBJ       := $(patsubst src/%.cpp,build/%.o,$(SRC))
+INCLUDES  := $(addprefix -I,$(INCS))
 
-all: $(EXEC)
+vpath %.cpp $(SRC_DIRS)
 
-$(EXEC): $(OBJ)
-	$(CC) -o $(EXEC) $(OBJ) $(LDFLAGS) $(LIBS)
-	
-.cpp.o:
-	$(CC) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+define make-goal
+$1/%.o: %.cpp
+	$(CC) $(INCLUDES) -c $$< -o $$@
+endef
+
+.PHONY: all checkdirs clean
+
+all: checkdirs $(BINDIR)/lz77
+
+$(BINDIR)/lz77: $(OBJ)
+	$(LD) $^ -o $@
+
+checkdirs: $(BUILD_DIRS) $(BINDIR)
+
+$(BUILD_DIRS):
+	@mkdir -p $@/src
+
+$(BINDIR):
+	@mkdir -p $@
 
 clean:
-	rm -f *.o *~ $(OBJ) $(EXEC)
+	echo $(SRC_DIRS)
+	echo $(SRC)
+	@rm -rf $(BUILD_DIRS)
 
-depend: $(SOURCE)
-	makedepend $(INCLUDES) $^
+clean-all: clean
+	@rm -rf $(BINDIR)
+
+$(foreach bdir,$(BUILD_DIRS),$(eval $(call make-goal,$(bdir))))

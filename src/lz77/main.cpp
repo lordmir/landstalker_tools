@@ -11,7 +11,7 @@
 
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
-#include <lz77.h>
+#include <LZ77.h>
 
 int main(int argc, char** argv)
 {
