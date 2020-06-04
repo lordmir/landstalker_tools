@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 	{
 		TCLAP::CmdLine cmd("Utility for compressing/decompressing LZ77 graphics.\n"
 		                   "Part of the landstalker_tools set: github.com/lordmir/landstalker_tools\n"
-						   " - Written by LordMir, May 2020",
+						   " - Written by LordMir, June 2020",
 						   ' ', "0.1");
 						   
 		TCLAP::UnlabeledValueArg<std::string> fileIn("input_file", "The input file (.lz77/.bin)", true, "", "in_filename");
@@ -109,6 +109,7 @@ int main(int argc, char** argv)
 		outbuffer.assign(65536, 0);
 		size_t outlen = 0;
 		size_t inlen = input.size() - inOffset.getValue();
+
 		if (decompress.isSet() == true)
 		{
 			outlen = LZ77::Decode(input.data() + inOffset.getValue(), input.size() - inOffset.getValue(), outbuffer.data(), inlen);

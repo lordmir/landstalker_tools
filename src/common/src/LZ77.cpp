@@ -7,14 +7,16 @@
 
 #include "BitBarrel.h"
 #include <iostream>
+#include <iomanip>
 
 size_t LZ77::Decode(const uint8_t* inbuf, size_t bufsize, uint8_t* outbuf, size_t& esize)
 {
     size_t dsize = 0;
     const uint8_t* inbufptr = inbuf;
     BitBarrel cmd;
+    int a = 0;
     
-    for(;;)
+    while(static_cast<size_t>(inbufptr - inbuf) < bufsize)
     {
         if(cmd.empty())
         {
@@ -24,23 +26,44 @@ size_t LZ77::Decode(const uint8_t* inbuf, size_t bufsize, uint8_t* outbuf, size_
         {
             *outbuf++ = *inbufptr++;
             dsize++;
+            a++;
         }
         else
         {
             uint16_t offset = (*inbufptr & 0xF0) << 4 | *(inbufptr + 1);
             uint8_t length = 18 - (*inbufptr & 0x0F);
             inbufptr += 2;
+#ifndef NDEBUG
+            if (a)
+            {
+                std::cout << "C[" << a << "]; ";
+                for (int z = a; z > 0; --z)
+                    std::cout << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << (int)*(outbuf - z) << std::dec;
+                std::cout << std::endl;
+                a = 0;
+            }
+#endif
             if(offset)
             {
                 dsize += length;
+                int l = length;
                 for(; length != 0; --length)
                 {
                     *outbuf = *(outbuf - offset);
                     outbuf++;
                 }
+#ifndef NDEBUG
+                std::cout << "O[" << offset << "," << (int)l << "]; ";
+                for (int z = l; z > 0; --z)
+                    std::cout << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << (int)*(outbuf - offset - z) << std::dec;
+                std::cout << std::endl;
+#endif
             }
             else
             {
+#ifndef NDEBUG
+                std::cout << "END;" << std::endl;
+#endif
                 break;
             }
         }
@@ -111,13 +134,23 @@ size_t LZ77::Encode(const uint8_t* inbuf, size_t bufsize, uint8_t* outbuf)
     size_t esize = 0;
     std::vector<Entry> entries;
     BitBarrel bb;
-    for(size_t i = 0; i < bufsize; )
+    size_t i = 0;
+    while(i < bufsize)
     {
         uint16_t match_offset = 0;
         uint8_t match_len = find_best_match(inbuf, bufsize, i, match_offset);
         
         if(match_len >= 3)
         {
+            uint16_t tmatch_offset = 0;
+            // Do the non-greedy optimisation - look at next offset and see if we find a longer run.
+            uint8_t tmatch_len = find_best_match(inbuf, bufsize, i + 1, tmatch_offset);
+            if (tmatch_len > match_len)
+            {
+                match_offset = tmatch_offset;
+                match_len = tmatch_len;
+                entries.push_back(Entry(Entry::T_BYTE, inbuf[i++], 0));
+            }
             entries.push_back(Entry(Entry::T_RUN, match_len, match_offset));
             i += match_len;
         }
@@ -129,10 +162,15 @@ size_t LZ77::Encode(const uint8_t* inbuf, size_t bufsize, uint8_t* outbuf)
     entries.push_back(Entry(Entry::T_END,0,0));
     std::vector<Entry>::const_iterator it;
     std::vector<Entry>::const_iterator bstart = entries.begin();
+    int a = 0;
     for(it = bstart; ; ++it)
     {
-        if(bb.full() || ((it == entries.end()) && !bb.empty()))
+        if(bb.full() || it == entries.end())
         {
+            while (!bb.full())
+            {
+                bb(0);
+            }
             *outbuf++ = bb.out();
             esize++;
             for( ; bstart != it; ++bstart)
@@ -142,23 +180,37 @@ size_t LZ77::Encode(const uint8_t* inbuf, size_t bufsize, uint8_t* outbuf)
                     case Entry::T_BYTE:
                         *outbuf++ = bstart->entry1;
                         esize++;
+                        a++;
                         break;
                     case Entry::T_RUN:
+#ifndef NDEBUG
+                        if (a)
+                        {
+                            std::cout << "C[" << a << "];" << std::endl;
+                            a = 0;
+                        }
+                        std::cout << "O[" << bstart->entry2 << "," << (int)bstart->entry1 << "];" << std::endl;
+#endif
                         assert((bstart->entry2 & 0xFFF) != 0);
                         *outbuf++ = (bstart->entry2 & 0xF00) >> 4 | ((18 - bstart->entry1) & 0xF);
                         *outbuf++ = bstart->entry2 & 0xFF;
                         esize+=2;
                         break;
                     default:
+#ifndef NDEBUG
+                        if (a)
+                        {
+                            std::cout << "C[" << a << "];" << std::endl;
+                            a = 0;
+                        }
+                        std::cout << "END;" << std::endl;
+#endif
                         *outbuf++ = 0x00;
                         *outbuf++ = 0x00;
                         esize+=2;
+                        return esize;
                 }
             }
-        }
-        if(it == entries.end())
-        {
-            break;
         }
         bb(it->type == Entry::T_BYTE);
     }

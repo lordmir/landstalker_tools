@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.30011.22
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LZ77", "LZ77.vcxproj", "{C9688F0E-FBD5-4CA0-B347-9F8E67844C72}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pal2tpl", "pal2tpl.vcxproj", "{8E0945A2-7042-4412-9ACC-274FED94D070}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{C9688F0E-FBD5-4CA0-B347-9F8E67844C72}.Release|x64.Build.0 = Release|x64
 		{C9688F0E-FBD5-4CA0-B347-9F8E67844C72}.Release|x86.ActiveCfg = Release|Win32
 		{C9688F0E-FBD5-4CA0-B347-9F8E67844C72}.Release|x86.Build.0 = Release|Win32
+		{8E0945A2-7042-4412-9ACC-274FED94D070}.Debug|x64.ActiveCfg = Debug|x64
+		{8E0945A2-7042-4412-9ACC-274FED94D070}.Debug|x64.Build.0 = Debug|x64
+		{8E0945A2-7042-4412-9ACC-274FED94D070}.Debug|x86.ActiveCfg = Debug|Win32
+		{8E0945A2-7042-4412-9ACC-274FED94D070}.Debug|x86.Build.0 = Debug|Win32
+		{8E0945A2-7042-4412-9ACC-274FED94D070}.Release|x64.ActiveCfg = Release|x64
+		{8E0945A2-7042-4412-9ACC-274FED94D070}.Release|x64.Build.0 = Release|x64
+		{8E0945A2-7042-4412-9ACC-274FED94D070}.Release|x86.ActiveCfg = Release|Win32
+		{8E0945A2-7042-4412-9ACC-274FED94D070}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

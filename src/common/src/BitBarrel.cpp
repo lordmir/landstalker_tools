@@ -64,8 +64,10 @@ bool BitBarrel::operator()(bool rhs)
 
 uint8_t BitBarrel::out()
 {
+    uint8_t tmp = m_val;
     m_pos = 0;
-    return m_val;
+    m_val = 0;
+    return tmp;
 }
 
 template <class T>

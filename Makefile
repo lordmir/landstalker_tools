@@ -1,34 +1,39 @@
 CC         := g++
 LD         := g++
 
-MODULES    := common lz77
+EXEC       := lz77 pal2tpl
+MODULES    := common
 SRCDIR     := src
 BUILDDIR   := build
 BINDIR     := bin
 SRC_DIRS   := $(addprefix $(SRCDIR)/,$(MODULES))
-BUILD_DIRS := $(addprefix $(BUILDDIR)/,$(MODULES))
+BUILD_DIRS := $(addprefix $(BUILDDIR)/,$(MODULES)) $(addprefix $(BUILDDIR)/,$(EXEC))
 INC_DIRS   := third_party/tclap-1.2.2/include/
-EXECS      := lz77
 INCS       := $(SRC_DIRS) $(addsuffix /include,$(SRC_DIRS)) $(addprefix $(SRCDIR)/,$(INC_DIRS))
 
 SRC       := $(foreach sdir,$(SRC_DIRS),$(wildcard $(sdir)/*.cpp))
 SRC       += $(foreach sdir,$(SRC_DIRS),$(wildcard $(sdir)/src/*.cpp))
-OBJ       := $(patsubst src/%.cpp,build/%.o,$(SRC))
+OBJ       := $(patsubst $(SRCDIR)/%.cpp,$(BUILDDIR)/%.o,$(SRC))
 INCLUDES  := $(addprefix -I,$(INCS))
+EXECS     := $(addprefix $(BINDIR)/,$(EXEC))
+EXEC_SDIR := $(addprefix $(SRCDIR)/,$(EXEC))
+EXEC_ODIR := $(addprefix $(BUILDDIR)/,$(EXEC))
 
-vpath %.cpp $(SRC_DIRS)
+vpath %.cpp $(SRC_DIRS) $(EXEC_SDIR)
 
-define make-goal
-$1/%.o: %.cpp
-	$(CC) $(INCLUDES) -c $$< -o $$@
+define make-obj
+$(BUILDDIR)/$1/%.o: $(SRCDIR)/$1/$2/%.cpp
+	$(CC) $(CFLAGS) $(CXXFLAGS) $(INCLUDES) -c $$< -o $$@
 endef
 
-.PHONY: all checkdirs clean
+define make-exec
+$(BINDIR)/$1: $(OBJ) $(patsubst $(SRCDIR)/$1/%.cpp,$(BUILDDIR)/$1/%.o,$(wildcard $(SRCDIR)/$1/*.cpp))
+	$(LD) $(LDFLAGS) $(LIBS) $$^ -o $(BINDIR)/$1
+endef
 
-all: checkdirs $(BINDIR)/lz77
+.PHONY: all checkdirs clean clean-all
 
-$(BINDIR)/lz77: $(OBJ)
-	$(LD) $^ -o $@
+all: checkdirs $(EXECS)
 
 checkdirs: $(BUILD_DIRS) $(BINDIR)
 
@@ -39,11 +44,11 @@ $(BINDIR):
 	@mkdir -p $@
 
 clean:
-	echo $(SRC_DIRS)
-	echo $(SRC)
-	@rm -rf $(BUILD_DIRS)
+	@rm -rf $(BUILDDIR)
 
 clean-all: clean
 	@rm -rf $(BINDIR)
 
-$(foreach bdir,$(BUILD_DIRS),$(eval $(call make-goal,$(bdir))))
+$(foreach module,$(MODULES),$(eval $(call make-obj,$(module)/src)))
+$(foreach exec,$(EXEC),$(eval $(call make-obj,$(exec))))
+$(foreach exec,$(EXEC),$(eval $(call make-exec,$(exec))))
