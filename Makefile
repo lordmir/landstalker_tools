@@ -1,14 +1,14 @@
 CC         := g++
 LD         := g++
 
-EXEC       := lz77 pal2tpl
+EXEC       := lz77 pal2tpl map2d
 MODULES    := common
 SRCDIR     := src
 BUILDDIR   := build
 BINDIR     := bin
 SRC_DIRS   := $(addprefix $(SRCDIR)/,$(MODULES))
 BUILD_DIRS := $(addprefix $(BUILDDIR)/,$(MODULES)) $(addprefix $(BUILDDIR)/,$(EXEC))
-INC_DIRS   := third_party/tclap-1.2.2/include/
+INC_DIRS   := third_party/tclap-1.2.2/include/ ../src/third_party/rapidcsv-7.00/src/
 INCS       := $(SRC_DIRS) $(addsuffix /include,$(SRC_DIRS)) $(addprefix $(SRCDIR)/,$(INC_DIRS))
 
 SRC       := $(foreach sdir,$(SRC_DIRS),$(wildcard $(sdir)/*.cpp))

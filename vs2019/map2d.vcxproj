@@ -18,11 +18,25 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\common\src\BitBarrel.cpp" />
+    <ClCompile Include="..\src\common\src\BitBarrelWriter.cpp" />
+    <ClCompile Include="..\src\common\src\LZ77.cpp" />
+    <ClCompile Include="..\src\common\src\Tile.cpp" />
+    <ClCompile Include="..\src\common\src\TileAttributes.cpp" />
+    <ClCompile Include="..\src\common\src\Tilemap2DRLE.cpp" />
+    <ClCompile Include="..\src\common\src\Utils.cpp" />
+    <ClCompile Include="..\src\map2d\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\common\include\Tilemap2DRLE.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{8E0945A2-7042-4412-9ACC-274FED94D070}</ProjectGuid>
+    <ProjectGuid>{502DF520-BD7E-41AA-8451-91B8F30AEE7F}</ProjectGuid>
     <RootNamespace>pal2tpl</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>map2d</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -149,9 +163,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\src\pal2tpl\main.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
