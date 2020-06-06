@@ -15,9 +15,6 @@
     <ClCompile Include="..\src\common\src\BitBarrel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\common\src\BitBarrelWriter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\common\src\LZ77.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

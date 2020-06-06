@@ -20,7 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\common\src\BitBarrel.cpp" />
-    <ClCompile Include="..\src\common\src\BitBarrelWriter.cpp" />
     <ClCompile Include="..\src\common\src\LZ77.cpp" />
     <ClCompile Include="..\src\lz77\main.cpp" />
   </ItemGroup>

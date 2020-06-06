@@ -15,21 +15,23 @@
 #include <LZ77.h>
 #include <Tilemap2DRLE.h>
 #include <Tile.h>
+#include <Block.h>
+#include <BlocksetCmp.h>
 
 int main(int argc, char** argv)
 {
 	try
 	{
-		TCLAP::CmdLine cmd("Utility for converting 2D tilemaps between binary, compressed binary and CSV.\n"
+		TCLAP::CmdLine cmd("Utility for converting 2D tilemaps and blocksets between binary, compressed binary and CSV.\n"
 			"Part of the landstalker_tools set: github.com/lordmir/landstalker_tools\n"
 			" - Written by LordMir, June 2020",
 			' ', "0.1");
 
-		std::vector<std::string> formats{"csv","map","lz77","rle"};
+		std::vector<std::string> formats{"csv","map","lz77","rle","cbs"};
 		TCLAP::ValuesConstraint<std::string> allowedVals(formats);
 
-		TCLAP::UnlabeledValueArg<std::string> fileIn("input_file", "The input file (.map/.rle/.lz77/.csv)", true, "", "in_filename");
-		TCLAP::UnlabeledValueArg<std::string> fileOut("output_file", "The output file (.map/.rle/.lz77/.csv)", true, "", "out_filename");
+		TCLAP::UnlabeledValueArg<std::string> fileIn("input_file", "The input file (.map/.rle/.lz77/.csv/.cbs)", true, "", "in_filename");
+		TCLAP::UnlabeledValueArg<std::string> fileOut("output_file", "The output file (.map/.rle/.lz77/.csv/.cbs)", true, "", "out_filename");
 		TCLAP::ValueArg<std::string> inputFormat("i", "input_format", "Input format", true, "map", &allowedVals);
 		TCLAP::ValueArg<std::string> outputFormat("o", "output_format", "Output format", true, "csv", &allowedVals);
 		TCLAP::ValueArg<size_t> widthIn("", "width", "Width of the 2D map in 8x8 tiles", false, 0, "width_tiles");
@@ -76,6 +78,12 @@ int main(int argc, char** argv)
 				std::cerr << "Warning: Width and height parameters will be ignored, as " << inputFormat.getValue()
 					      << " format maps already contain this information." << std::endl;
 			}
+			if (inputFormat.getValue() == "cbs")
+			{
+				// Blocksets are essentially a list of four tiles. Each four tiles makes up a single 2x2 block
+				width = 4;
+				height = 0;
+			}
 		}
 
 		// First, cache our input file
@@ -94,7 +102,7 @@ int main(int argc, char** argv)
 			std::streampos filesize = ifs.tellg();
 			ifs.seekg(0, std::ios::beg);
 
-			if (inOffset.getValue() >= filesize)
+			if (filesize > 0 && inOffset.getValue() >= filesize)
 			{
 				std::ostringstream msg;
 				msg << "Provided offset " << inOffset.getValue() << " is greater than the size of the file \"" << fileIn.getValue() << "\" (" << filesize << " bytes).";
@@ -204,25 +212,53 @@ int main(int argc, char** argv)
 				}
 			}
 		}
-		else if (inputFormat.getValue() == "csv")
+		else if (inputFormat.getValue() == "cbs")
 		{
-			std::stringstream ss(std::string(input.begin() + inOffset.getValue(), input.end()));
-			rapidcsv::Document csv(ss, rapidcsv::LabelParams(-1, -1));
-			// For CSV, first work out the number of rows and columns
-			width = csv.GetColumnCount();
-			height = csv.GetRowCount();
-			if (width <= 0 || height <= 0)
-			{
-				throw std::runtime_error("Error: CSV malformed");
-			}
+			// Compressed blockset
+			std::vector<Block> blocks;
+			height = BlocksetCmp::Decode(input.data() + inOffset.getValue(), input.size() - inOffset.getValue(), blocks);
+			width = 4;
 			map.reserve(width * height);
-			for (size_t y = 0; y < height; y++)
+			for (const auto& block : blocks)
 			{
-				for (size_t x = 0; x < width; x++)
+				for (size_t x = 0; x < width; ++x)
 				{
-					map.push_back(csv.GetCell<unsigned>(x, y));
+					map.push_back(block.GetTile(x));
 				}
 			}
+		}
+		else if (inputFormat.getValue() == "csv")
+		{
+			if (input.begin() + inOffset.getValue() == input.end())
+			{
+				// Special case - zero byte file.
+				width = 0;
+				height = 0;
+			}
+			else
+			{
+				std::stringstream ss(std::string(input.begin() + inOffset.getValue(), input.end()));
+				rapidcsv::Document csv(ss, rapidcsv::LabelParams(-1, -1));
+				// For CSV, first work out the number of rows and columns
+				width = csv.GetColumnCount();
+				height = csv.GetRowCount();
+				if (width <= 0 || height <= 0)
+				{
+					throw std::runtime_error("Error: CSV malformed");
+				}
+				map.reserve(width * height);
+				for (size_t y = 0; y < height; y++)
+				{
+					for (size_t x = 0; x < width; x++)
+					{
+						map.push_back(csv.GetCell<unsigned>(x, y));
+					}
+				}
+			}
+		}
+		else
+		{
+			throw std::runtime_error("Unexpected input file format");
 		}
 		
 		// Convert intermediate binary to output
@@ -261,6 +297,22 @@ int main(int argc, char** argv)
 			}
 			outbuffer = map2d.Compress();
 		}
+		else if (outputFormat.getValue() == "cbs")
+		{
+			// Compressed blockset
+			if (map.size() % 4 != 0)
+			{
+				throw std::runtime_error("Cannot convert a tilemap with a size that isn't a multiple of 4 into a blockmap.");
+			}
+			std::vector<Block> blocks;
+			for (auto it = map.cbegin(); it != map.cend(); it += 4)
+			{
+				blocks.push_back(Block(it, it + 4));
+			}
+			outbuffer.resize(65536);
+			size_t outsize = BlocksetCmp::Encode(blocks, outbuffer.data(), outbuffer.size());
+			outbuffer.resize(outsize);
+		}
 		else if (outputFormat.getValue() == "csv")
 		{
 			std::stringstream oss;
@@ -282,6 +334,10 @@ int main(int argc, char** argv)
 			std::copy(std::istream_iterator<uint8_t>(oss),
 				      std::istream_iterator<uint8_t>(),
 				      std::back_inserter(outbuffer));
+		}
+		else
+		{
+			throw std::runtime_error("Unexpected output file format");
 		}
 
 		// Finally, write-out
@@ -306,9 +362,12 @@ int main(int argc, char** argv)
 	catch (TCLAP::ArgException& e)
 	{
 		std::cerr << "Error: '" << e.argId() << "' - " << e.error() << std::endl;
+		return 1;
 	}
 	catch (std::exception& e)
 	{
 		std::cerr << e.what() << std::endl;
+		return 2;
 	}
+	return 0;
 }
