@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pal2tpl", "pal2tpl.vcxproj"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "map2d", "map2d.vcxproj", "{502DF520-BD7E-41AA-8451-91B8F30AEE7F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "map3d", "map3d.vcxproj", "{5E22CACE-E761-4153-988B-8D6F20D2EC41}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -41,6 +43,14 @@ Global
 		{502DF520-BD7E-41AA-8451-91B8F30AEE7F}.Release|x64.Build.0 = Release|x64
 		{502DF520-BD7E-41AA-8451-91B8F30AEE7F}.Release|x86.ActiveCfg = Release|Win32
 		{502DF520-BD7E-41AA-8451-91B8F30AEE7F}.Release|x86.Build.0 = Release|Win32
+		{5E22CACE-E761-4153-988B-8D6F20D2EC41}.Debug|x64.ActiveCfg = Debug|x64
+		{5E22CACE-E761-4153-988B-8D6F20D2EC41}.Debug|x64.Build.0 = Debug|x64
+		{5E22CACE-E761-4153-988B-8D6F20D2EC41}.Debug|x86.ActiveCfg = Debug|Win32
+		{5E22CACE-E761-4153-988B-8D6F20D2EC41}.Debug|x86.Build.0 = Debug|Win32
+		{5E22CACE-E761-4153-988B-8D6F20D2EC41}.Release|x64.ActiveCfg = Release|x64
+		{5E22CACE-E761-4153-988B-8D6F20D2EC41}.Release|x64.Build.0 = Release|x64
+		{5E22CACE-E761-4153-988B-8D6F20D2EC41}.Release|x86.ActiveCfg = Release|Win32
+		{5E22CACE-E761-4153-988B-8D6F20D2EC41}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

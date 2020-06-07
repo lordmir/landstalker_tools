@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 		TCLAP::UnlabeledValueArg<std::string> fileOut("output_file", "The output file (.map/.rle/.lz77/.csv/.cbs)", true, "", "out_filename");
 		TCLAP::ValueArg<std::string> inputFormat("i", "input_format", "Input format", true, "map", &allowedVals);
 		TCLAP::ValueArg<std::string> outputFormat("o", "output_format", "Output format", true, "csv", &allowedVals);
-		TCLAP::ValueArg<size_t> widthIn("", "width", "Width of the 2D map in 8x8 tiles", false, 0, "width_tiles");
+		TCLAP::ValueArg<size_t> widthIn("w", "width", "Width of the 2D map in 8x8 tiles", false, 0, "width_tiles");
 		TCLAP::ValueArg<size_t> heightIn("", "height", "Height of the 2D map in 8x8 tiles", false, 0, "height_tiles");
 		TCLAP::SwitchArg force("f", "force", "Force overwrite if file already exists and no offset has been set", false);
 		TCLAP::ValueArg<uint32_t> inOffset("", "inoffset", "Offset into the input file to start reading data, useful if working with the raw ROM", false, 0, "offset");

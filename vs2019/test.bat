@@ -1,15 +1,8 @@
-REM LZ77 Asset test
-REM ===============
-SETLOCAL 
-goto :MAIN
-
-:TEST_LZ77
-lz77 -df %IN% orig.bin
-lz77 -cf orig.bin orig.lz77
-lz77 -df orig.lz77 test.bin
-fc /b orig.bin test.bin
-EXIT /B %ERRORLEVEL% 
-
-:MAIN
-set IN=PASSION
-call :TEST_LZ77
+@echo off
+release\map3d\map3d -f -d %1 -g fg0.csv -b bg0.csv -m hm0.csv
+release\map3d\map3d -f -c map.cmp -g fg0.csv -b bg0.csv -m hm0.csv
+release\map3d\map3d -f -d map.cmp -g fg1.csv -b bg1.csv -m hm1.csv
+fc bg0.csv bg1.csv
+fc fg0.csv fg1.csv
+fc hm0.csv hm1.csv
+dir %1 map.cmp
