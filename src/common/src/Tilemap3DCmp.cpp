@@ -7,6 +7,7 @@
 #include <functional>
 #include <cstdint>
 #include <algorithm>
+#include <iostream>
 
 #include "BitBarrel.h"
 #include "BitBarrelWriter.h"
@@ -43,7 +44,6 @@ uint16_t ilog2(uint16_t num)
 uint16_t Tilemap3DCmp::Decode(const uint8_t* src, RoomTilemap& tilemap)
 {
     BitBarrel bb(src);
-    
 
     tilemap.left   = bb.readBits(8);
     tilemap.top    = bb.readBits(8);
@@ -188,7 +188,7 @@ uint16_t Tilemap3DCmp::Decode(const uint8_t* src, RoomTilemap& tilemap)
             tilemap.heightmap[dst_addr++] = hm_pattern;
         }
     }
-    return t;
+    return bb.getBytePosition();
 }
 
 void makeCodedNumber(uint16_t value, BitBarrelWriter& bb)
@@ -244,7 +244,7 @@ int findMatchFrequency(const std::vector<uint16_t>& input, size_t offset, std::u
         }
         if (match_run == best)
         {
-            fc[b] += match_run;
+            fc[b] ++;
         }
     }
     return best;
@@ -318,7 +318,7 @@ uint16_t Tilemap3DCmp::Encode(const RoomTilemap& tilemap, uint8_t* dst, size_t s
     std::copy(tilemap.foreground.begin(), tilemap.foreground.end(), tiles.begin());
     std::copy(tilemap.background.begin(), tilemap.background.end(), tiles.begin() + tiles.size()/2);
     // First stage of map compression involves LZ77 with a fixed-size dictionary
-    // STEP 1: Run map through LZ77 compressor.
+    // STEP 1: Run map through LZ77 compressor. Make a list of LZ77 offset frequencies.
     std::unordered_map<int, int> offset_freq_count;
     std::vector<bool> compressed(tiles.size(), false);
     size_t idx = 1;
@@ -340,25 +340,34 @@ uint16_t Tilemap3DCmp::Encode(const RoomTilemap& tilemap, uint8_t* dst, size_t s
     typedef std::function<bool(const std::pair<int, int>&, const std::pair<int, int>&)> Comparator;
     Comparator comparator = [](const std::pair<int, int>& p1, const std::pair<int, int>& p2)
     {
-        return p1.second > p2.second;
+        if (p1.second != p2.second)
+        {
+            return p1.second > p2.second;
+        }
+        else
+        {
+            return p1.first < p2.first;
+        }
     };
 
     std::multiset<std::pair<int, int>, Comparator> frequency_counts(offset_freq_count.begin(), offset_freq_count.end(), comparator);
     for (auto it = frequency_counts.cbegin(); it != frequency_counts.cend(); ++it)
     {
+#ifndef NDEBUG
         //std::cout << "Offset " << std::hex << it->first << ": " << std::dec << it->second << std::endl;
+#endif
         if (std::find(offsets.begin(), offsets.end(), it->first) == offsets.end())
         {
             offsets.push_back(it->first);
         }
     }
     offsets.resize(14);
-
+#ifndef NDEBUG
     for (size_t i = 0; i < offsets.size(); ++i)
     {
-        //std::cout << "Offset " << std::hex << offsets[i] << ": " << std::dec << offset_freq_count[offsets[i]] << std::endl;
+        std::cout << "Offset " << std::hex << offsets[i] << ": " << std::dec << offset_freq_count[offsets[i]] << std::endl;
     }
-
+#endif
     // STEP 3: Compress map using LZ77 and the back offset dictionary created during step 2
 
     lz77.emplace_back(1, 0, 0);
@@ -378,15 +387,19 @@ uint16_t Tilemap3DCmp::Encode(const RoomTilemap& tilemap, uint8_t* dst, size_t s
         }
         if (lz77.back().back_offset_idx == 0)
         {
-            //std::cout << " LOAD TILE @ " << idx << std::endl;
+#ifndef NDEBUG
+            std::cout << " LOAD TILE @ " << idx << std::endl;
+#endif
             compressed[idx] = false;
             idx++;
         }
         else
         {
-            //std::cout << " LZ77 @ " << idx << " : copy " << lz77.back().run_length
-            //          << " bytes from offset " << lz77.back().back_offset_idx << "("
-            //          << (idx - offsets[lz77.back().back_offset_idx]) << ")" << std::endl;
+#ifndef NDEBUG
+            std::cout << " LZ77 @ " << idx << " : copy " << lz77.back().run_length
+                      << " bytes from offset " << lz77.back().back_offset_idx << "("
+                      << (idx - offsets[lz77.back().back_offset_idx]) << ")" << std::endl;
+#endif
             std::fill(compressed.begin() + idx, compressed.begin() + idx + lz77.back().run_length, true);
             idx += lz77.back().run_length;
         }
@@ -496,6 +509,10 @@ uint16_t Tilemap3DCmp::Encode(const RoomTilemap& tilemap, uint8_t* dst, size_t s
         incrementing_tile_counts.begin(), incrementing_tile_counts.end(), comparator);
 
     tile_dict[0] = incrementing_tile_freqs.begin()->first;
+#ifndef NDEBUG
+    std::cout << "TILE DICT 1: " << std::hex << tile_dict[1] << std::endl;
+    std::cout << "TILE DICT 0: " << std::hex << tile_dict[0] << std::endl;
+#endif
 
     // STEP 7: Start to compress tile data. Identify if tile is (1) equal to any in tile dictionary + increment,
     //         (2) between tileDict[0] and tileDict[0] + tileDictIncr[0], or (3) none of the above.
@@ -509,23 +526,31 @@ uint16_t Tilemap3DCmp::Encode(const RoomTilemap& tilemap, uint8_t* dst, size_t s
             if (tiles[i] == tile_dict[0] + tile_increment[0])
             {
                 tile_increment[0]++;
-                //std::cout << "INCREMENT TILE 1 [" << std::hex << rt.tiles[i] << " @ " << std::dec << i << std::endl;
+#ifndef NDEBUG
+                std::cout << "INCREMENT TILE 1 [" << std::hex << tiles[i] << " @ " << std::dec << i << std::endl;
+#endif
                 tile_entries.emplace_back(3, 0, 0);
             }
             else if (tiles[i] == tile_dict[1] + tile_increment[1])
             {
                 tile_increment[1]++;
-                //std::cout << "INCREMENT TILE 2 [" << std::hex << rt.tiles[i] << " @ " << std::dec << i << std::endl;
+#ifndef NDEBUG
+                std::cout << "INCREMENT TILE 2 [" << std::hex << tiles[i] << " @ " << std::dec << i << std::endl;
+#endif
                 tile_entries.emplace_back(2, 0, 0);
             }
             else if ((tiles[i] >= tile_dict[0]) && (tiles[i] < (tile_dict[0] + tile_increment[0])))
             {
-                //std::cout << "PLACE REL TILE [" << std::hex << rt.tiles[i] << " @ " << std::dec << i << std::endl;
+#ifndef NDEBUG
+                std::cout << "PLACE REL TILE [" << std::hex << tiles[i] << " @ " << std::dec << i << std::endl;
+#endif
                 tile_entries.emplace_back(1, static_cast<int>(tiles[i] - tile_dict[0]), static_cast<uint16_t>(ilog2(tile_increment[0])));
             }
             else
             {
-                //std::cout << "PLACE TILE " << std::hex << rt.tiles[i] << " @ " << std::dec << i << std::endl;
+#ifndef NDEBUG
+                std::cout << "PLACE TILE " << std::hex << tiles[i] << " @ " << std::dec << i << std::endl;
+#endif
                 tile_entries.emplace_back(0, tiles[i], ilog2(tile_dict[1]));
             }
         }

@@ -184,7 +184,7 @@ int romtest(const std::string& infilename, const std::string& outfilename)
 	int fails = 0;
 	int size = 0;
 	int uncompressed_size = 0;
-	int orig_size = 500015;
+	int orig_size = 0;
 	std::set<uint32_t> map_offsets;
 	std::vector<std::vector<uint8_t>> cmaps;
 	uint8_t* o = rom.data() + 0xA0A12;
@@ -198,7 +198,7 @@ int romtest(const std::string& infilename, const std::string& outfilename)
 	{
 		std::cout << std::hex << *it << std::dec << std::endl;
 		RoomTilemap rt;
-		Tilemap3DCmp::Decode(rom.data() + *it, rt);
+		orig_size += Tilemap3DCmp::Decode(rom.data() + *it, rt);
 
 		std::cout << (unsigned)rt.GetWidth() << "x" << (unsigned)rt.GetHeight() << ": " << rt.background.size() << std::endl;
 
@@ -286,8 +286,24 @@ int romtest(const std::string& infilename, const std::string& outfilename)
 	std::cout << "PASSES:            " << std::dec << std::setw(10) << passes << std::setw(10) << std::endl;
 	std::cout << "FAILS:             " << std::dec << std::setw(10) << fails << std::setw(10) << std::endl;
 	std::cout << "TOTAL SIZE:        " << std::dec << std::setw(10) << size << std::setw(10) << std::endl;
-	std::cout << "UNCOMPRESSED SIZE: " << std::dec << std::setw(10) << uncompressed_size << std::setw(10) << (100.0 * size / uncompressed_size) << std::endl;
-	std::cout << "ORIGINAL SIZE:     " << std::dec << std::setw(10) << orig_size << std::setw(10) << (100.0 * size / orig_size) << std::endl;
+	std::cout << "UNCOMPRESSED SIZE: " << std::dec << std::setw(10) << uncompressed_size << std::setw(10) << (100.0 * size / uncompressed_size) << "%" << std::endl;
+	std::cout << "ORIGINAL SIZE:     " << std::dec << std::setw(10) << orig_size << std::setw(10) << (100.0 * size / orig_size) << "%" << std::endl;
+
+	std::cout << std::endl;
+#ifndef NDEBUG
+	for (size_t i = 0; i < cmaps[0].size(); ++i)
+	{
+		if (i % 16 == 0)
+		{
+			printf("%04X: ", i);
+		}
+		printf("%02X ", cmaps[0][i]);
+		if (((i + 1) % 16 == 0) || (i == cmaps[0].size()))
+		{
+			puts("");
+		}
+	}
+#endif
 
 	rom[0x210] = 0x00;
 	rom[0x211] = 0x00;
