@@ -1,7 +1,7 @@
 CC         := g++
 LD         := g++
 
-EXEC       := lz77 pal2tpl map2d map3d
+EXEC       := lz77 pal2tpl map2d map3d strings
 MODULES    := common
 SRCDIR     := src
 BUILDDIR   := build

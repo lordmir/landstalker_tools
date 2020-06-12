@@ -188,7 +188,7 @@ uint16_t Tilemap3DCmp::Decode(const uint8_t* src, RoomTilemap& tilemap)
             tilemap.heightmap[dst_addr++] = hm_pattern;
         }
     }
-    return bb.getBytePosition();
+    return static_cast<uint16_t>(bb.getBytePosition());
 }
 
 void makeCodedNumber(uint16_t value, BitBarrelWriter& bb)
