@@ -11,8 +11,12 @@
 #include <LSString.h>
 #include <IntroString.h>
 #include <EndCreditString.h>
+#include <HuffmanString.h>
+#include <HuffmanTrees.h>
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
+
+std::shared_ptr<HuffmanTrees> huffman_trees;
 
 bool fileExists(const std::string& filename)
 {
@@ -90,7 +94,10 @@ void ParseDecodedFile(const std::string& filename, const std::string& format, st
 	else
 	{
 		std::string line;
-		std::getline(decodedfs, line); // Discard header row
+		if (format == "intro" || format == "ending")
+		{
+			std::getline(decodedfs, line); // Discard header row
+		}
 		while (decodedfs.eof() == false)
 		{
 			std::getline(decodedfs, line);
@@ -107,6 +114,10 @@ void ParseDecodedFile(const std::string& filename, const std::string& format, st
 				else if (format == "ending")
 				{
 					decoded.push_back(std::make_shared<EndCreditString>(line));
+				}
+				else if (format == "main")
+				{
+					decoded.push_back(std::make_shared<HuffmanString>(line, huffman_trees));
 				}
 			}
 		}
@@ -130,6 +141,10 @@ void ParseEncodedBuffer(const std::vector<uint8_t>& encoded, const std::string& 
 		{
 			decoded.push_back(std::make_shared<EndCreditString>());
 		}
+		else if (format == "main")
+		{
+			decoded.push_back(std::make_shared<HuffmanString>(huffman_trees));
+		}
 		offset += decoded.back()->Decode(encoded.data() + offset, encoded.size() - offset);
 	}
 }
@@ -137,7 +152,10 @@ void ParseEncodedBuffer(const std::vector<uint8_t>& encoded, const std::string& 
 void WriteDecodedData(std::string filename, bool force, std::vector<std::shared_ptr<LSString>>& decoded)
 {
 	std::fstream decodedfs = OpenOutputFile(filename, force);
-	decodedfs << decoded.front()->GetHeaderRow() << std::endl;
+	if (decoded.front()->GetHeaderRow().length() > 0)
+	{
+		decodedfs << decoded.front()->GetHeaderRow() << std::endl;
+	}
 	for (const auto& line : decoded)
 	{
 		decodedfs << line->Serialise() << std::endl;
@@ -152,6 +170,11 @@ void EncodeData(const std::vector<std::shared_ptr<LSString>>& decoded, std::stri
 	if (format == "intro")
 	{
 		split = 1;
+	}
+	else if (format == "main")
+	{
+		std::cout << "Compressing text strings..." << std::endl;
+		split = 256;
 	}
 
 	encoded.push_back(std::vector<uint8_t>(65536));
@@ -170,6 +193,10 @@ void EncodeData(const std::vector<std::shared_ptr<LSString>>& decoded, std::stri
 			encoded.push_back(std::vector<uint8_t>(65536));
 			offset = 0;
 		}
+		if (lines % 100 == 0)
+		{
+			std::cout << ".";
+		}
 	}
 	encoded.back().resize(offset);
 	while (encoded.back().empty())
@@ -178,7 +205,42 @@ void EncodeData(const std::vector<std::shared_ptr<LSString>>& decoded, std::stri
 	}
 }
 
-void WriteEncodedData(const std::string& filename, bool use_pattern, bool force, const std::vector<std::vector<uint8_t>>& encoded, size_t offset)
+std::ofstream OpenBinaryFileForWriting(const std::string& filename, bool force, size_t offset)
+{
+	if (offset == 0 && force == false && fileExists(filename))
+	{
+		std::ostringstream msg;
+		msg << "Unable to write to file \"" << filename << "\" as it already exists. Try running the command again with the -f flag.";
+		throw std::runtime_error(msg.str());
+	}
+	std::ofstream ofs(filename, std::ios::binary | std::ios::trunc);
+	if (ofs.good() == false)
+	{
+		std::ostringstream msg;
+		msg << "Unable to open output file \"" << filename << "\" for writing.";
+		throw std::runtime_error(msg.str());
+	}
+	return ofs;
+}
+
+void WriteBinaryFile(const std::string& filename, bool force, const std::vector<uint8_t>& data, size_t offset)
+{
+	std::ofstream ofs(OpenBinaryFileForWriting(filename, force, offset));
+	if (offset > 0)
+	{
+		std::vector<uint8_t> buffer;
+		CacheBinaryFile(filename, buffer, 0);
+		buffer.resize(data.size() + offset);
+		std::copy(data.begin(), data.end(), buffer.begin() + offset);
+		ofs.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+	}
+	else
+	{
+		ofs.write(reinterpret_cast<const char*>(data.data()), data.size());
+	}
+}
+
+void WriteEncodedData(const std::string& filename, bool use_pattern, bool force, const std::vector<std::vector<uint8_t>>& encoded, size_t offset, std::string ext = ".bin")
 {
 	size_t total = 0;
 	size_t file = 1;
@@ -198,18 +260,7 @@ void WriteEncodedData(const std::string& filename, bool use_pattern, bool force,
 			std::copy(enc.begin(), enc.end(), buffer.begin() + offset);
 			offset += enc.size();
 		}
-		outfile = filename;
-		ofs.open(outfile, std::ios::binary | std::ios::trunc);
-		if (ofs.good() == false)
-		{
-			std::ostringstream msg;
-			msg << "Unable to open output file \"" << outfile << "\" for writing.";
-			throw std::runtime_error(msg.str());
-		}
-		else
-		{
-			ofs.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
-		}
+		WriteBinaryFile(filename, true, buffer, 0);
 	}
 	else
 	{
@@ -223,40 +274,18 @@ void WriteEncodedData(const std::string& filename, bool use_pattern, bool force,
 					file++;
 					ofs.close();
 				}
-				ss << filename << std::setw(2) << std::setfill('0') << file << ".bin";
+				ss << filename << std::setw(2) << std::setfill('0') << file << ext;
 				outfile = ss.str();
-				if (force == false && fileExists(outfile))
-				{
-					std::ostringstream msg;
-					msg << "Unable to write to file \"" << outfile << "\" as it already exists. Try running the command again with the -f flag.";
-					throw std::runtime_error(msg.str());
-				}
-				ofs.open(outfile, std::ios::binary | std::ios::trunc);
+				ofs = OpenBinaryFileForWriting(outfile, force, 0);
 			}
 			else
 			{
 				if (ofs.is_open() == false)
 				{
-					outfile = filename;
-					if (force == false && fileExists(outfile))
-					{
-						std::ostringstream msg;
-						msg << "Unable to write to file \"" << outfile << "\" as it already exists. Try running the command again with the -f flag.";
-						throw std::runtime_error(msg.str());
-					}
-					ofs.open(outfile, std::ios::binary | std::ios::trunc);
+					ofs = OpenBinaryFileForWriting(outfile, force, 0);
 				}
 			}
-			if (ofs.good() == false)
-			{
-				std::ostringstream msg;
-				msg << "Unable to open output file \"" << outfile << "\" for writing.";
-				throw std::runtime_error(msg.str());
-			}
-			else
-			{
-				ofs.write(reinterpret_cast<const char*>(enc.data()), enc.size());
-			}
+			ofs.write(reinterpret_cast<const char*>(enc.data()), enc.size());
 		}
 	}
 }
@@ -283,8 +312,9 @@ int main(int argc, char** argv)
 		TCLAP::ValueArg<std::string> hTable("u", "huffman_table", "The file containing the Huffman compression tables.\n", false, "", "huffman_table");
 		TCLAP::ValueArg<std::string> hOffsetTable("t", "huffman_offset_table", "The file containing the Huffman table offsets.\n", false, "", "huffman_offsets");
 		TCLAP::ValueArg<uint32_t> hTableOff("U", "huffman_table_offset", "The offset in ROM to the Huffman compression tables.\n", false, 0, "offset");
-		TCLAP::ValueArg<uint32_t> hOffsetTableOff("T", "huffman_offset_table_offset", "The offset in ROM the Huffman table offsets.\n", false, 0, "offset");
+		TCLAP::ValueArg<uint32_t> hOffsetTableOff("T", "huffman_offset_table_offset", "The offset in ROM to the Huffman table offsets.\n", false, 0, "offset");
 		TCLAP::ValueArg<std::string> format("r", "format", "The string format to use.\n", true, "names", &allowedVals);
+		TCLAP::SwitchArg recalcHuffman("x", "recalc_huffman", "Recalculates the huffman tables and outputs the result to the files identified with the -u and -t flags.", false);
 		TCLAP::SwitchArg compress("c", "convert", "Converts the provided ASCII string table into binary data", false);
 		TCLAP::SwitchArg decompress("e", "extract", "Extracts the provided binary string data into an ASCII string table", false);
 		TCLAP::SwitchArg force("f", "force", "Force overwrite if file already exists and no offset has been set", false);
@@ -294,6 +324,7 @@ int main(int argc, char** argv)
 			"size is greater than expected, then data could be overwritten!", false, 0, "offset");
 		cmd.add(force);
 		cmd.add(format);
+		cmd.add(recalcHuffman);
 		cmd.add(hTable);
 		cmd.add(hTableOff);
 		cmd.add(hOffsetTable);
@@ -346,19 +377,72 @@ int main(int argc, char** argv)
 		std::vector<uint8_t> encoded;
 		std::vector<std::shared_ptr<LSString>> decoded;
 		std::vector<std::vector<uint8_t>> outbuffer;
+		std::string hufftablefile;
+		std::string huffofffile;
+
+		if (hOffsetTableOff.isSet())
+		{
+			huffofffile = outFile;
+		}
+		else if (hOffsetTable.isSet())
+		{
+			huffofffile = hOffsetTable.getValue();
+		}
+
+		if (hTableOff.isSet())
+		{
+			hufftablefile = outFile;
+		}
+		else if (hTable.isSet())
+		{
+			hufftablefile = hTable.getValue();
+		}
+		
+		if (hufftablefile.empty() == false && huffofffile.empty() == false &&
+		    (decompress.isSet() == true || recalcHuffman.isSet() == false))
+		{
+			std::vector<uint8_t> huffoff;
+			std::vector<uint8_t> hufftrs;
+			CacheBinaryFile(huffofffile, huffoff, hOffsetTableOff.getValue());
+			CacheBinaryFile(hufftablefile, hufftrs, hTableOff.getValue());
+			huffman_trees = std::make_shared<HuffmanTrees>(huffoff.data(), huffoff.size(), hufftrs.data(), hufftrs.size(), huffoff.size() / 2);
+		}
 
 		if (decompress.isSet())
 		{
+			
 			CacheBinaryFiles(binary_files, encoded, outOffset.getValue());
 			ParseEncodedBuffer(encoded, format.getValue(), decoded);
 			WriteDecodedData(outFile, force.isSet(), decoded);
 		}
 		else
 		{
+			if (recalcHuffman.isSet())
+			{
+				huffman_trees = std::make_shared<HuffmanTrees>();
+			}
 			ParseDecodedFile(inFile, format.getValue(), decoded);
+			if (recalcHuffman.isSet())
+			{
+				if (huffofffile.empty() == false && hufftablefile.empty() == false)
+				{
+					std::vector<uint8_t> huff_offsets;
+					std::vector<uint8_t> huff_trees;
+					huffman_trees->RecalculateTrees(decoded);
+					huffman_trees->EncodeTrees(huff_offsets, huff_trees);
+					WriteBinaryFile(huffofffile, force.getValue(), huff_offsets, hOffsetTableOff.getValue());
+					WriteBinaryFile(hufftablefile, force.getValue(), huff_trees, hTableOff.getValue());
+				}
+				else
+				{
+					throw std::runtime_error("Unable to write out recalculated trees: no filenames given");
+				}
+			}
 			EncodeData(decoded, format.getValue(), outbuffer);
-			WriteEncodedData(outFile, use_pattern, force.isSet(), outbuffer, outOffset.getValue());
+			WriteEncodedData(outFile, use_pattern, force.isSet(), outbuffer, outOffset.getValue(), decoded.back()->GetEncodedFileExt());
 		}
+
+		std::cout << "Done!" << std::endl;
 
 		return 0;
 	}

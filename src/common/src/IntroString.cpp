@@ -1,6 +1,7 @@
 #include "IntroString.h"
 #include <stdexcept>
 #include <sstream>
+#include <algorithm>
 
 const std::unordered_map<uint8_t, std::string> INTRO_CHARSET = {
 	{ 0, " "}, { 1, "A"}, { 2, "B"}, { 3, "C"}, { 4, "D"}, { 5, "E"}, { 6, "F"}, { 7, "G"},
@@ -37,12 +38,13 @@ IntroString::IntroString(const std::string& serialised)
 std::string IntroString::Serialise() const
 {
 	std::ostringstream ss;
-	ss << m_line1Y << "\t";
 	ss << m_line1X << "\t";
-	ss << m_line2Y << "\t";
+	ss << m_line1Y << "\t";
 	ss << m_line2X << "\t";
+	ss << m_line2Y << "\t";
 	ss << m_displayTime << "\t";
-	ss << m_str;
+	ss << m_str << "\t";
+	ss << m_line2;
 	return ss.str();
 }
 
@@ -51,21 +53,22 @@ void IntroString::Deserialise(const std::string& in)
 	std::istringstream liness(in);
 	std::string cell;
 	std::getline(liness, cell, '\t');
-	m_line1Y = std::atoi(cell.c_str());
-	std::getline(liness, cell, '\t');
 	m_line1X = std::atoi(cell.c_str());
 	std::getline(liness, cell, '\t');
-	m_line2Y = std::atoi(cell.c_str());
+	m_line1Y = std::atoi(cell.c_str());
 	std::getline(liness, cell, '\t');
 	m_line2X = std::atoi(cell.c_str());
 	std::getline(liness, cell, '\t');
+	m_line2Y = std::atoi(cell.c_str());
+	std::getline(liness, cell, '\t');
 	m_displayTime = std::atoi(cell.c_str());
 	std::getline(liness, m_str, '\t');
+	std::getline(liness, m_line2, '\t');
 }
 
 std::string IntroString::GetHeaderRow() const
 {
-	return "Line1_Y\tLine1_X\tLine2_Y\tLine2_X\tDisplayTime_Frames\tString";
+	return "Line1_X\tLine1_Y\tLine2_X\tLine2_Y\tDisplayTime\tLine1\tLine2";
 }
 
 template<class T>
@@ -118,7 +121,7 @@ size_t IntroString::Decode(const uint8_t* buffer, size_t size)
 	return sizeof(uint16_t) * 5 + DecodeString(buffer, size);
 }
 
-size_t IntroString::Encode(uint8_t* buffer, size_t size)
+size_t IntroString::Encode(uint8_t* buffer, size_t size) const
 {
 	WriteNum<uint16_t>(buffer, size, m_line1Y);
 	buffer += sizeof(uint16_t);
@@ -166,25 +169,44 @@ uint16_t IntroString::GetDisplayTime() const
 size_t IntroString::DecodeString(const uint8_t* string, size_t len)
 {
 	m_str = "";
-	const uint8_t* c = string;
-	while (*c != 0xFF)
+	size_t i = 0;
+	while (string[i] != 0xFF)
 	{
-		m_str += DecodeChar(*c++);
-		if(static_cast<size_t>(c - string) >= len)
+		if (i < 16)
+		{
+			m_str += DecodeChar(string[i++]);
+		}
+		else
+		{
+			m_line2 += DecodeChar(string[i++]);
+		}
+		if(i >= len)
 		{
 			throw std::runtime_error("Not enough bytes in buffer to decode string");
 		}
 	}
-	return c - string + 1;
+	return i + 1;
 }
 
-size_t IntroString::EncodeString(uint8_t* string, size_t len)
+size_t IntroString::EncodeString(uint8_t* string, size_t len) const
 {
 	size_t i = 0;
 	size_t j = 0;
-	while (j < m_str.size() && i < len - 1)
+	while (j < m_str.size() && i < len)
 	{
 		j += EncodeChar(m_str, j, string[i++]);
+	}
+	if (m_line2.empty() == false)
+	{
+		while (i < 16)
+		{
+			EncodeChar(" ", 0, string[i++]);
+		}
+		j = 0;
+		while (j < m_line2.size() && i < len)
+		{
+			j += EncodeChar(m_line2, j, string[i++]);
+		}
 	}
 	string[i] = 0xFF;
 	return i + 1;

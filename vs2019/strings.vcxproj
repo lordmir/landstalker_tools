@@ -19,13 +19,21 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\common\src\BitBarrel.cpp" />
+    <ClCompile Include="..\src\common\src\BitBarrelWriter.cpp" />
     <ClCompile Include="..\src\common\src\EndCreditString.cpp" />
+    <ClCompile Include="..\src\common\src\HuffmanString.cpp" />
+    <ClCompile Include="..\src\common\src\HuffmanTree.cpp" />
+    <ClCompile Include="..\src\common\src\HuffmanTrees.cpp" />
     <ClCompile Include="..\src\common\src\IntroString.cpp" />
     <ClCompile Include="..\src\common\src\LSString.cpp" />
     <ClCompile Include="..\src\strings\main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\include\EndCreditString.h" />
+    <ClInclude Include="..\src\common\include\HuffmanString.h" />
+    <ClInclude Include="..\src\common\include\HuffmanTree.h" />
+    <ClInclude Include="..\src\common\include\HuffmanTrees.h" />
     <ClInclude Include="..\src\common\include\IntroString.h" />
     <ClInclude Include="..\src\common\include\LSString.h" />
   </ItemGroup>

@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iomanip>
 #include <iostream>
+#include <vector>
 
 const std::unordered_map<uint8_t, std::string> CHARSET = {
 	{ 0, " "}, { 1, "0"}, { 2, "1"}, { 3, "2"}, { 4, "3"}, { 5, "4"}, { 6, "5"}, { 7, "6"},
@@ -34,7 +35,7 @@ size_t LSString::Decode(const uint8_t* buffer, size_t size)
 	return DecodeString(buffer, size);
 }
 
-size_t LSString::Encode(uint8_t* buffer, size_t size)
+size_t LSString::Encode(uint8_t* buffer, size_t size) const
 {
 	return EncodeString(buffer, size);
 }
@@ -53,7 +54,24 @@ void LSString::Deserialise(const std::string& in)
 
 std::string LSString::GetHeaderRow() const
 {
-	return "String";
+	return std::string();
+}
+
+std::string LSString::GetEncodedFileExt() const
+{
+	return ".bin";
+}
+
+void LSString::AddFrequencyCounts(FrequencyCounts& frequencies) const
+{
+	std::vector<uint8_t> buffer(1024);
+	buffer.resize(EncodeString(buffer.data(), buffer.size()));
+	uint8_t last = 0x55;
+	for (auto c : buffer)
+	{
+		frequencies[last][c]++;
+		last = c;
+	}
 }
 
 size_t LSString::DecodeString(const uint8_t* string, size_t len)
@@ -73,7 +91,7 @@ size_t LSString::DecodeString(const uint8_t* string, size_t len)
 	return c - string;
 }
 
-size_t LSString::EncodeString(uint8_t* string, size_t len)
+size_t LSString::EncodeString(uint8_t* string, size_t len) const
 {
 	size_t i = 1;
 	size_t j = 0;
@@ -89,7 +107,7 @@ size_t LSString::EncodeString(uint8_t* string, size_t len)
 	return i;
 }
 
-std::string LSString::DecodeChar(uint8_t chr)
+std::string LSString::DecodeChar(uint8_t chr) const
 {
 	if (Charmap().find(chr) != Charmap().end())
 	{
@@ -104,7 +122,7 @@ std::string LSString::DecodeChar(uint8_t chr)
 	}
 }
 
-size_t LSString::EncodeChar(std::string str, size_t index, uint8_t& chr)
+size_t LSString::EncodeChar(std::string str, size_t index, uint8_t& chr) const
 {
 	for (const auto& c : Charmap())
 	{

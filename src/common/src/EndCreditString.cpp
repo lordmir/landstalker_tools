@@ -12,7 +12,8 @@ const std::unordered_map<uint8_t, std::string> ENDING_CHARSET = {
 	{49, "v"}, {50, "w"}, {51, "x"}, {52, "y"}, {53, "z"}, {54, "1"}, {55, "3"}, {56, "9"},
 	{57, "(C)"}, {58, "(3)"}, {59, "-"}, {60, ","}, {61, "."},
 	{64, "{K1}"}, {65, "{K2}"}, {66, "{K3}"}, {67, "{K4}"},
-	{128, "_"}, {129, "{UL1}" }, { 130, "{UL2}" }, {0xFF, "{CTRL}"}
+	{128, "_"}, {129, "{UL1}" }, { 130, "{UL2}" },
+	{ 131, "{SEGA_LOGO}" }, {132, "{CLIMAX_LOGO}"}, {133, "{DDS520_LOGO}"}, {134, "{MIRAGE_LOGO}"}
 };
 
 EndCreditString::EndCreditString()
@@ -29,14 +30,6 @@ EndCreditString::EndCreditString(int8_t fmt0, int8_t fmt1, const std::string& st
 {
 }
 
-EndCreditString::EndCreditString(int8_t fmt0, int8_t fmt1, const std::vector<uint8_t>& gfxParams, const std::string& str)
-	: LSString(str),
-	m_height(fmt0),
-	m_column(fmt1),
-	m_gfx_params(gfxParams)
-{
-}
-
 EndCreditString::EndCreditString(const std::string& serialised)
 {
 	Deserialise(serialised);
@@ -49,36 +42,32 @@ size_t EndCreditString::Decode(const uint8_t* buffer, size_t size)
 	{
 		throw std::runtime_error("Not enough bytes to decode string");
 	}
-	while (buffer[1] <= 0xF0)
-	{
-		m_gfx_params.push_back(*buffer++);
-		size--;
-		ret++;
-	}
 	m_height = *reinterpret_cast<const int8_t*>(buffer++);
 	m_column = *reinterpret_cast<const int8_t*>(buffer++);
 	ret += 2;
 	size -= 2;
 	if (m_height != -1)
 	{
-		ret += DecodeString(buffer, size);
+		if (m_column < 0)
+		{
+			ret += DecodeString(buffer, size);
+		}
+		else
+		{
+			ret++;
+			size--;
+			m_str = DecodeChar(*buffer++);
+		}
 	}
 	return ret;
 }
 
-size_t EndCreditString::Encode(uint8_t* buffer, size_t size)
+size_t EndCreditString::Encode(uint8_t* buffer, size_t size) const
 {
 	size_t ret = 0;
-	if (size < 2 + m_gfx_params.size())
+	if (size < 2)
 	{
 		throw std::runtime_error("Not enough bytes to encode string");
-	}
-	if (m_gfx_params.empty() == false)
-	{
-		std::copy(m_gfx_params.begin(), m_gfx_params.end(), buffer);
-		buffer += m_gfx_params.size();
-		size -= m_gfx_params.size();
-		ret += m_gfx_params.size();
 	}
 	*buffer++ = *reinterpret_cast<const uint8_t*>(&m_height);
 	*buffer++ = *reinterpret_cast<const uint8_t*>(&m_column);
@@ -86,7 +75,15 @@ size_t EndCreditString::Encode(uint8_t* buffer, size_t size)
 	ret += 2;
 	if (m_height != -1)
 	{
-		ret += EncodeString(buffer, size);
+		if (m_column < 0)
+		{
+			ret += EncodeString(buffer, size);
+		}
+		else
+		{
+			ret++;
+			EncodeChar(m_str, 0, *buffer++);
+		}
 	}
 	return ret;
 }
@@ -94,18 +91,7 @@ size_t EndCreditString::Encode(uint8_t* buffer, size_t size)
 std::string EndCreditString::Serialise() const
 {
 	std::ostringstream ss;
-	if (m_gfx_params.empty() == false)
-	{
-		for (auto it = m_gfx_params.begin(); it != m_gfx_params.end(); ++it)
-		{
-			ss << static_cast<int>(*it);
-			if (it != std::prev(m_gfx_params.end()))
-			{
-				ss << ",";
-			}
-		}
-	}
-	ss << "\t" << static_cast<int>(m_height) << "\t";
+	ss << static_cast<int>(m_height) << "\t";
 	ss << -static_cast<int>(m_column) << "\t";
 	ss << m_str;
 	return ss.str();
@@ -116,16 +102,6 @@ void EndCreditString::Deserialise(const std::string& in)
 	std::istringstream liness(in);
 	std::string cell;
 	std::getline(liness, cell, '\t');
-	if (cell.find_first_of(',') != std::string::npos)
-	{
-		std::string val;
-		std::istringstream gfxparams(cell);
-		while (std::getline(gfxparams, val, ','))
-		{
-			m_gfx_params.push_back(std::atoi(val.c_str()));
-		}
-	}
-	std::getline(liness, cell, '\t');
 	m_height = std::atoi(cell.c_str());
 	std::getline(liness, cell, '\t');
 	m_column = -std::atoi(cell.c_str());
@@ -134,7 +110,7 @@ void EndCreditString::Deserialise(const std::string& in)
 
 std::string EndCreditString::GetHeaderRow() const
 {
-	return "Graphics Data\tHeight\tColumn\tString";
+	return "Height\tColumn\tString";
 }
 
 uint8_t EndCreditString::GetHeight() const
@@ -145,11 +121,6 @@ uint8_t EndCreditString::GetHeight() const
 uint8_t EndCreditString::GetColumn() const
 {
 	return m_column;
-}
-
-const std::vector<uint8_t>& EndCreditString::GetGfxParams() const
-{
-	return m_gfx_params;
 }
 
 size_t EndCreditString::DecodeString(const uint8_t* string, size_t len)
@@ -167,7 +138,7 @@ size_t EndCreditString::DecodeString(const uint8_t* string, size_t len)
 	return c - string + 1;
 }
 
-size_t EndCreditString::EncodeString(uint8_t* string, size_t len)
+size_t EndCreditString::EncodeString(uint8_t* string, size_t len) const
 {
 	size_t i = 0;
 	size_t j = 0;

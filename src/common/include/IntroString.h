@@ -11,7 +11,7 @@ public:
 	IntroString(const std::string& serialised);
 
 	virtual size_t Decode(const uint8_t* buffer, size_t size);
-	virtual size_t Encode(uint8_t* buffer, size_t size);
+	virtual size_t Encode(uint8_t* buffer, size_t size) const;
 	virtual std::string Serialise() const;
 	virtual void Deserialise(const std::string& ss);
 	virtual std::string GetHeaderRow() const;
@@ -23,7 +23,7 @@ public:
 	uint16_t GetDisplayTime() const;
 protected:
 	virtual size_t DecodeString(const uint8_t* string, size_t len);
-	virtual size_t EncodeString(uint8_t* string, size_t len);
+	virtual size_t EncodeString(uint8_t* string, size_t len) const;
 	virtual const std::unordered_map<uint8_t, std::string>& Charmap() const;
 private:
 	uint16_t m_line1Y;
@@ -31,6 +31,7 @@ private:
 	uint16_t m_line2Y;
 	uint16_t m_line2X;
 	uint16_t m_displayTime;
+	std::string m_line2;
 };
 
 #endif // _INTRO_STRING_H
