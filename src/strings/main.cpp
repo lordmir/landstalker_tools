@@ -282,7 +282,7 @@ void WriteEncodedData(const std::string& filename, bool use_pattern, bool force,
 			{
 				if (ofs.is_open() == false)
 				{
-					ofs = OpenBinaryFileForWriting(outfile, force, 0);
+					ofs = OpenBinaryFileForWriting(filename, force, 0);
 				}
 			}
 			ofs.write(reinterpret_cast<const char*>(enc.data()), enc.size());
@@ -365,7 +365,8 @@ int main(int argc, char** argv)
 				{
 					use_pattern = true;
 				}
-				outFile = *std::next(files.begin());
+				outFile = *std::prev(files.end());
+
 			}
 			else // total_files < 2
 			{
