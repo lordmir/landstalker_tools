@@ -3,7 +3,9 @@
 
 #include <unordered_map>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
+#include <string>
 #include <BitBarrel.h>
 #include <BitBarrelWriter.h>
 

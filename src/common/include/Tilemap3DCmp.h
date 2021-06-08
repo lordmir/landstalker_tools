@@ -2,6 +2,7 @@
 #define LSTILEMAPCMP_H
 
 #include <cstdint>
+#include <cstdlib>
 #include <vector>
 
 struct RoomTilemap
