@@ -2,16 +2,17 @@
 #include <stdexcept>
 #include <sstream>
 #include <algorithm>
+#include <cstring>
 
-const std::unordered_map<uint8_t, std::string> INTRO_CHARSET = {
-	{ 0, " "}, { 1, "A"}, { 2, "B"}, { 3, "C"}, { 4, "D"}, { 5, "E"}, { 6, "F"}, { 7, "G"},
-	{ 8, "H"}, { 9, "I"}, {10, "J"}, {11, "K"}, {12, "L"}, {13, "M"}, {14, "N"}, {15, "O"},
-	{16, "P"}, {17, "Q"}, {18, "R"}, {19, "S"}, {20, "T"}, {21, "U"}, {22, "V"}, {23, "W"},
-	{24, "X"}, {25, "Y"}, {26, "Z"}, {27, "1"}, {28, "2"}, {29, "3"}
+const LSString::CharacterSet INTRO_CHARSET = {
+	{ 0, L" "}, { 1, L"A"}, { 2, L"B"}, { 3, L"C"}, { 4, L"D"}, { 5, L"E"}, { 6, L"F"}, { 7, L"G"},
+	{ 8, L"H"}, { 9, L"I"}, {10, L"J"}, {11, L"K"}, {12, L"L"}, {13, L"M"}, {14, L"N"}, {15, L"O"},
+	{16, L"P"}, {17, L"Q"}, {18, L"R"}, {19, L"S"}, {20, L"T"}, {21, L"U"}, {22, L"V"}, {23, L"W"},
+	{24, L"X"}, {25, L"Y"}, {26, L"Z"}, {27, L"1"}, {28, L"2"}, {29, L"3"}
 };
 
 IntroString::IntroString()
-	: LSString(),
+	: LSString(INTRO_CHARSET),
 	  m_line1Y(0),
 	  m_line1X(0),
 	  m_line2Y(0),
@@ -20,24 +21,31 @@ IntroString::IntroString()
 {
 }
 
-IntroString::IntroString(uint16_t line1_y, uint16_t line1_x, uint16_t line2_y, uint16_t line2_x, uint16_t display_time, std::string str)
-	: LSString(str),
+IntroString::IntroString(uint16_t line1_y, uint16_t line1_x, uint16_t line2_y, uint16_t line2_x, uint16_t display_time, IntroString::StringType line1, IntroString::StringType line2)
+	: LSString(m_str, INTRO_CHARSET),
 	m_line1Y(line1_y),
 	m_line1X(line1_x),
 	m_line2Y(line2_y),
 	m_line2X(line2_x),
+	m_line2(line2),
 	m_displayTime(display_time)
 {
 }
 
-IntroString::IntroString(const std::string& serialised)
+IntroString::IntroString(const IntroString::StringType& serialised)
+	: LSString(INTRO_CHARSET),
+	  m_line1Y(0),
+	  m_line1X(0),
+	  m_line2Y(0),
+	  m_line2X(0),
+	  m_displayTime(0)
 {
 	Deserialise(serialised);
 }
 
-std::string IntroString::Serialise() const
+IntroString::StringType IntroString::Serialise() const
 {
-	std::ostringstream ss;
+	std::basic_ostringstream<IntroString::StringType::value_type> ss;
 	ss << m_line1X << "\t";
 	ss << m_line1Y << "\t";
 	ss << m_line2X << "\t";
@@ -48,27 +56,28 @@ std::string IntroString::Serialise() const
 	return ss.str();
 }
 
-void IntroString::Deserialise(const std::string& in)
+void IntroString::Deserialise(const IntroString::StringType& in)
 {
-	std::istringstream liness(in);
-	std::string cell;
-	std::getline(liness, cell, '\t');
-	m_line1X = std::atoi(cell.c_str());
-	std::getline(liness, cell, '\t');
-	m_line1Y = std::atoi(cell.c_str());
-	std::getline(liness, cell, '\t');
-	m_line2X = std::atoi(cell.c_str());
-	std::getline(liness, cell, '\t');
-	m_line2Y = std::atoi(cell.c_str());
-	std::getline(liness, cell, '\t');
-	m_displayTime = std::atoi(cell.c_str());
-	std::getline(liness, m_str, '\t');
-	std::getline(liness, m_line2, '\t');
+	std::basic_istringstream<IntroString::StringType::value_type> liness(in);
+	IntroString::StringType cell;
+	std::getline<IntroString::StringType::value_type>(liness, cell, '\t');
+	m_line1X = std::stoi(cell);
+	std::getline<IntroString::StringType::value_type>(liness, cell, '\t');
+	m_line1Y = std::stoi(cell.c_str());
+	std::getline<IntroString::StringType::value_type>(liness, cell, '\t');
+	m_line2X = std::stoi(cell.c_str());
+	std::getline<IntroString::StringType::value_type>(liness, cell, '\t');
+	m_line2Y = std::stoi(cell.c_str());
+	std::getline<IntroString::StringType::value_type>(liness, cell, '\t');
+	m_displayTime = std::stoi(cell.c_str());
+	std::getline<IntroString::StringType::value_type>(liness, m_str, '\t');
+	std::getline<IntroString::StringType::value_type>(liness, m_line2, '\t');
 }
 
-std::string IntroString::GetHeaderRow() const
+IntroString::StringType IntroString::GetHeaderRow() const
 {
-	return "Line1_X\tLine1_Y\tLine2_X\tLine2_Y\tDisplayTime\tLine1\tLine2";
+	const char* ret = "Line1_X\tLine1_Y\tLine2_X\tLine2_Y\tDisplayTime\tLine1\tLine2";
+	return IntroString::StringType(ret, ret + strlen(ret));
 }
 
 template<class T>
@@ -166,11 +175,23 @@ uint16_t IntroString::GetDisplayTime() const
 	return m_displayTime;
 }
 
+IntroString::StringType IntroString::GetLine(int line) const
+{
+	if (line == 0)
+	{
+		return m_str;
+	}
+	else
+	{
+		return m_line2;
+	}
+}
+
 size_t IntroString::DecodeString(const uint8_t* string, size_t len)
 {
-	m_str = "";
+	m_str.clear();
 	size_t i = 0;
-	while (string[i] != 0xFF)
+	while (string[i] != 0xFF && i < 32)
 	{
 		if (i < 16)
 		{
@@ -200,7 +221,8 @@ size_t IntroString::EncodeString(uint8_t* string, size_t len) const
 	{
 		while (i < 16)
 		{
-			EncodeChar(" ", 0, string[i++]);
+			const char* space = " ";
+			EncodeChar(IntroString::StringType(space, space + strlen(space)), 0, string[i++]);
 		}
 		j = 0;
 		while (j < m_line2.size() && i < len)
@@ -210,9 +232,4 @@ size_t IntroString::EncodeString(uint8_t* string, size_t len) const
 	}
 	string[i] = 0xFF;
 	return i + 1;
-}
-
-const std::unordered_map<uint8_t, std::string>& IntroString::Charmap() const
-{
-	return INTRO_CHARSET;
 }

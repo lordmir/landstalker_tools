@@ -3,90 +3,94 @@
 #include <stdexcept>
 
 TileAttributes::TileAttributes()
-: m_hflip(false),
-  m_vflip(false),
-  m_priority(false),
-  m_pal(0)
+: hflip_(false),
+  vflip_(false),
+  priority_(false)
 {
 }
 
-TileAttributes::TileAttributes(bool hflip, bool vflip, bool priority, uint8_t pal)
-: m_hflip(hflip),
-  m_vflip(vflip),
-  m_priority(priority),
-  m_pal(pal)
+TileAttributes::TileAttributes(bool hflip, bool vflip, bool priority)
+: hflip_(hflip),
+  vflip_(vflip),
+  priority_(priority)
 {
 }
 
-void TileAttributes::SetAttribute(const TileAttributes::Attribute& attr)
+void TileAttributes::setAttribute(const TileAttributes::Attribute& attr)
 {
     switch(attr)
     {
         case TileAttributes::ATTR_HFLIP:
-            m_hflip = true;
+            hflip_ = true;
             break;
         case TileAttributes::ATTR_VFLIP:
-            m_vflip = true;
+            vflip_ = true;
             break;
         case TileAttributes::ATTR_PRIORITY:
-            m_priority = true;
+            priority_ = true;
             break;
         default:
             throw(std::runtime_error("Bad Attribute Type!"));
     }
 }
 
-void TileAttributes::ClearAttribute(const TileAttributes::Attribute& attr)
+void TileAttributes::clearAttribute(const TileAttributes::Attribute& attr)
 {
     switch(attr)
     {
         case TileAttributes::ATTR_HFLIP:
-            m_hflip = false;
+            hflip_ = false;
             break;
         case TileAttributes::ATTR_VFLIP:
-            m_vflip = false;
+            vflip_ = false;
             break;
         case TileAttributes::ATTR_PRIORITY:
-            m_priority = false;
+            priority_ = false;
             break;
         default:
             throw(std::runtime_error("Bad Attribute Type!"));
     }
 }
 
-bool TileAttributes::GetAttribute(const TileAttributes::Attribute& attr) const
+bool TileAttributes::toggleAttribute(const Attribute& attr)
+{
+    bool retval = false;
+    switch (attr)
+    {
+    case TileAttributes::ATTR_HFLIP:
+        hflip_ = !hflip_;
+        retval = hflip_;
+        break;
+    case TileAttributes::ATTR_VFLIP:
+        vflip_ = !vflip_;
+        retval = vflip_;
+        break;
+    case TileAttributes::ATTR_PRIORITY:
+        priority_ = !priority_;
+        retval = priority_;
+        break;
+    default:
+        throw(std::runtime_error("Bad Attribute Type!"));
+    }
+    return retval;
+}
+
+bool TileAttributes::getAttribute(const TileAttributes::Attribute& attr) const
 {
     bool retval = false;
     switch(attr)
     {
         case TileAttributes::ATTR_HFLIP:
-            retval = m_hflip;
+            retval = hflip_;
             break;
         case TileAttributes::ATTR_VFLIP:
-            retval = m_vflip;
+            retval = vflip_;
             break;
         case TileAttributes::ATTR_PRIORITY:
-            retval = m_priority;
+            retval = priority_;
             break;
         default:
             throw(std::runtime_error("Bad Attribute Type!"));
     }
     return retval;
-}
-
-uint8_t TileAttributes::GetPallette() const
-{
-    return m_pal;
-}
-
-void TileAttributes::SetPalette(uint8_t palette)
-{
-    if (palette > 3)
-    {
-        throw(std::runtime_error("Bad palette ID!"));
-    }
-    else
-    {
-        m_pal = palette;
-    }
 }

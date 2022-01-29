@@ -1,4 +1,4 @@
-#include <LSString.h>
+#include "LSString.h"
 
 #include <stdexcept>
 #include <unordered_map>
@@ -7,27 +7,34 @@
 #include <iostream>
 #include <vector>
 
-const std::unordered_map<uint8_t, std::string> CHARSET = {
-	{ 0, " "}, { 1, "0"}, { 2, "1"}, { 3, "2"}, { 4, "3"}, { 5, "4"}, { 6, "5"}, { 7, "6"},
-	{ 8, "7"}, { 9, "8"}, {10, "9"}, {11, "A"}, {12, "B"}, {13, "C"}, {14, "D"}, {15, "E"},
-	{16, "F"}, {17, "G"}, {18, "H"}, {19, "I"}, {20, "J"}, {21, "K"}, {22, "L"}, {23, "M"},
-	{24, "N"}, {25, "O"}, {26, "P"}, {27, "Q"}, {28, "R"}, {29, "S"}, {30, "T"}, {31, "U"},
-	{32, "V"}, {33, "W"}, {34, "X"}, {35, "Y"}, {36, "Z"}, {37, "a"}, {38, "b"}, {39, "c"},
-	{40, "d"}, {41, "e"}, {42, "f"}, {43, "g"}, {44, "h"}, {45, "i"}, {46, "j"}, {47, "k"},
-	{48, "l"}, {49, "m"}, {50, "n"}, {51, "o"}, {52, "p"}, {53, "q"}, {54, "r"}, {55, "s"},
-	{56, "t"}, {57, "u"}, {58, "v"}, {59, "w"}, {60, "x"}, {61, "y"}, {62, "z"}, {63, "*"},
-	{64, "."}, {65, ","}, {66, "?"}, {67, "!"}, {68, "/"}, {69, "<"}, {70, ">"}, {71, ":"},
-	{72, "-"}, {73, "\'"}, {74, "\""}, {75, "%"}, {76, "#"}, {77, "&"}, {78, "("}, {79, ")"},
-	{80, "="}, {81, "{NW}"}, {82, "{NE}"}, {83, "{SE}"}, {84, "{SW}"}
+const LSString::CharacterSet LSString::DEFAULT_CHARACTER_SET = {
+	{ 0, L" "}, { 1, L"0"}, { 2, L"1"}, { 3, L"2"}, { 4, L"3"}, { 5, L"4"}, { 6, L"5"}, { 7, L"6"},
+	{ 8, L"7"}, { 9, L"8"}, {10, L"9"}, {11, L"A"}, {12, L"B"}, {13, L"C"}, {14, L"D"}, {15, L"E"},
+	{16, L"F"}, {17, L"G"}, {18, L"H"}, {19, L"I"}, {20, L"J"}, {21, L"K"}, {22, L"L"}, {23, L"M"},
+	{24, L"N"}, {25, L"O"}, {26, L"P"}, {27, L"Q"}, {28, L"R"}, {29, L"S"}, {30, L"T"}, {31, L"U"},
+	{32, L"V"}, {33, L"W"}, {34, L"X"}, {35, L"Y"}, {36, L"Z"}, {37, L"a"}, {38, L"b"}, {39, L"c"},
+	{40, L"d"}, {41, L"e"}, {42, L"f"}, {43, L"g"}, {44, L"h"}, {45, L"i"}, {46, L"j"}, {47, L"k"},
+	{48, L"l"}, {49, L"m"}, {50, L"n"}, {51, L"o"}, {52, L"p"}, {53, L"q"}, {54, L"r"}, {55, L"s"},
+	{56, L"t"}, {57, L"u"}, {58, L"v"}, {59, L"w"}, {60, L"x"}, {61, L"y"}, {62, L"z"}, {63, L"*"},
+	{64, L"."}, {65, L","}, {66, L"?"}, {67, L"!"}, {68, L"/"}, {69, L"<"}, {70, L">"}, {71, L":"},
+	{72, L"-"}, {73, L"\'"}, {74, L"\""}, {75, L"%"}, {76, L"#"}, {77, L"&"}, {78, L"("}, {79, L")"},
+	{80, L"="}, {81, L"{NW}"}, {82, L"{NE}"}, {83, L"{SE}"}, {84, L"{SW}"}
 };
 
-LSString::LSString()
+const LSString::DiacriticMap LSString::DEFAULT_DIACRITIC_MAP = {};
+
+LSString::LSString(const LSString::CharacterSet& charset, const LSString::DiacriticMap& diacritic_map)
+	: m_charset(charset),
+	  m_diacritic_map(diacritic_map)
 {
 }
 
-LSString::LSString(const std::string& s)
-	: m_str(s)
+LSString::LSString(const StringType& s, const LSString::CharacterSet& charset, const LSString::DiacriticMap& diacritic_map)
+	: m_str(),
+	  m_charset(charset),
+	  m_diacritic_map(diacritic_map)
 {
+	Deserialise(s);
 }
 
 size_t LSString::Decode(const uint8_t* buffer, size_t size)
@@ -40,21 +47,21 @@ size_t LSString::Encode(uint8_t* buffer, size_t size) const
 	return EncodeString(buffer, size);
 }
 
-std::string LSString::Serialise() const
+LSString::StringType LSString::Serialise() const
 {
-	std::ostringstream ss;
-	ss << m_str;
+	std::basic_ostringstream<LSString::StringType::value_type> ss;
+	ss << ApplyDiacritics(m_str);
 	return ss.str();
 }
 
-void LSString::Deserialise(const std::string& in)
+void LSString::Deserialise(const LSString::StringType& in)
 {
-	m_str = in;
+	m_str = RemoveDiacritics(in);
 }
 
-std::string LSString::GetHeaderRow() const
+LSString::StringType LSString::GetHeaderRow() const
 {
-	return std::string();
+	return LSString::StringType();
 }
 
 std::string LSString::GetEncodedFileExt() const
@@ -76,7 +83,7 @@ void LSString::AddFrequencyCounts(FrequencyCounts& frequencies) const
 
 size_t LSString::DecodeString(const uint8_t* string, size_t len)
 {
-	m_str = "";
+	m_str.clear();
 	size_t strsize = string[0];
 	const uint8_t* c = string + 1;
 	if (strsize > len)
@@ -107,24 +114,24 @@ size_t LSString::EncodeString(uint8_t* string, size_t len) const
 	return i;
 }
 
-std::string LSString::DecodeChar(uint8_t chr) const
+LSString::StringType LSString::DecodeChar(uint8_t chr) const
 {
-	if (Charmap().find(chr) != Charmap().end())
+	if (m_charset.find(chr) != m_charset.end())
 	{
-		return Charmap().at(chr);
+		return m_charset.at(chr);
 	}
 	else
 	{
-		std::ostringstream ss;
-		ss << "{" << std::setw(2) << std::setfill('0') << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
-		   << static_cast<unsigned>(chr) << "}";
+		std::basic_ostringstream<LSString::StringType::value_type> ss;
+		ss << L"{" << std::setw(2) << std::setfill(L'0') << std::hex << std::uppercase << std::setw(2) << std::setfill(L'0')
+		   << static_cast<unsigned>(chr) << L"}";
 		return ss.str();
 	}
 }
 
-size_t LSString::EncodeChar(std::string str, size_t index, uint8_t& chr) const
+size_t LSString::EncodeChar(LSString::StringType str, size_t index, uint8_t& chr) const
 {
-	for (const auto& c : Charmap())
+	for (const auto& c : m_charset)
 	{
 		if (c.second.size() <= str.size() - index)
 		{
@@ -134,7 +141,6 @@ size_t LSString::EncodeChar(std::string str, size_t index, uint8_t& chr) const
 				return c.second.size();
 			}
 		}
-		
 	}
 	if (str[index] == '{')
 	{
@@ -145,8 +151,8 @@ size_t LSString::EncodeChar(std::string str, size_t index, uint8_t& chr) const
 			ss << "Bad character number in position " << index << " found when parsing string.";
 			throw std::runtime_error(ss.str());
 		}
-		std::string charnum = str.substr(index + 1, end_of_number - index - 1);
-		std::istringstream iss(charnum);
+		LSString::StringType charnum = str.substr(index + 1, end_of_number - index - 1);
+		std::basic_istringstream<LSString::StringType::value_type> iss(charnum);
 		size_t num;
 		iss >> std::hex >> num;
 		if (num > 0xFF)
@@ -165,7 +171,90 @@ size_t LSString::EncodeChar(std::string str, size_t index, uint8_t& chr) const
 	return 0;
 }
 
-const std::unordered_map<uint8_t, std::string>& LSString::Charmap() const
+LSString::StringType LSString::ApplyDiacritics(const StringType& str) const
 {
-	return CHARSET;
+	StringType ret;
+	std::size_t index = 0;
+	
+	while (index < str.size())
+	{
+		bool found = false;
+		for (const auto& d : m_diacritic_map)
+		{
+			if (d.first.size() <= str.size() - index)
+			{
+				if (d.first == str.substr(index, d.first.size()))
+				{
+					for (const auto c : d.second)
+					{
+						if (c.first.size() + d.first.size() <= str.size() - index)
+						{
+							if (c.first == str.substr(index + d.first.size(), c.first.size()))
+							{
+								ret += c.second;
+								index += c.first.size() + d.first.size();
+								found = true;
+								break;
+							}
+						}
+					}
+				}
+				if (found)
+				{
+					break;
+				}
+			}
+		}
+		if (!found)
+		{
+			ret += str[index++];
+		}
+	}
+	return ret;
+}
+
+LSString::StringType LSString::RemoveDiacritics(const StringType& str) const
+{
+	StringType ret;
+	std::size_t index = 0;
+
+	while (index < str.size())
+	{
+		bool found = false;
+		for (const auto& d : m_diacritic_map)
+		{
+			for (const auto c : d.second)
+			{
+				if (c.second.size() <= str.size() - index)
+				{
+					if (c.second == str.substr(index, c.second.size()))
+					{
+						ret += d.first + c.first;
+						index += c.second.size();
+						found = true;
+						break;
+					}
+				}
+			}
+			if (found)
+			{
+				break;
+			}
+		}
+		if (!found)
+		{
+			ret += str[index++];
+		}
+	}
+	return ret;
+}
+
+const LSString::CharacterSet& LSString::GetCharset() const
+{
+	return m_charset;
+}
+
+void LSString::SetCharset(const CharacterSet& charset)
+{
+	m_charset = charset;
 }

@@ -1,12 +1,13 @@
-#include <HuffmanTrees.h>
+#include "HuffmanTrees.h"
 #include <stdexcept>
 #include <iomanip>
 #include <sstream>
 #include <iostream>
 #include <algorithm>
 
-#include <BitBarrel.h>
-#include <BitBarrelWriter.h>
+#include "BitBarrel.h"
+#include "BitBarrelWriter.h"
+#include "Utils.h"
 
 HuffmanTrees::HuffmanTrees()
 	: m_num_chars(0)
@@ -66,9 +67,9 @@ void HuffmanTrees::EncodeTrees(std::vector<uint8_t>& huffman_char_offsets, std::
 	}
 }
 
-std::vector<uint8_t> HuffmanTrees::CompressString(const std::vector<uint8_t>& decompressed)
+std::vector<uint8_t> HuffmanTrees::CompressString(const std::vector<uint8_t>& decompressed, uint8_t eos_marker)
 {
-	uint8_t last = 0x55;
+	uint8_t last = eos_marker;
 	BitBarrelWriter compressed;
 	for(auto chr : decompressed)
 	{
@@ -89,27 +90,27 @@ std::vector<uint8_t> HuffmanTrees::CompressString(const std::vector<uint8_t>& de
 	}
 	if (last != 0x55)
 	{
-		throw std::runtime_error("String terminator 0x55 not last character in string.");
+		throw std::runtime_error("String terminator " + Hex(eos_marker) + " not last character in string.");
 	}
 	return std::vector<uint8_t>(compressed.Begin(), compressed.End());
 }
 
-std::vector<uint8_t> HuffmanTrees::DecompressString(const std::vector<uint8_t>& compressed)
+std::vector<uint8_t> HuffmanTrees::DecompressString(const std::vector<uint8_t>& compressed, uint8_t eos_marker)
 {
 	std::vector<uint8_t> decompressed;
-	uint8_t last = 0x55;
+	uint8_t last = eos_marker;
 	BitBarrel bb(compressed.data());
 	do
 	{
 		if (m_trees.find(last) == m_trees.end())
 		{
 			std::ostringstream ss;
-			ss << "Unable to decompress string: " << " Huffman table does not exist for character \'" << std::hex << last << "\'.";
+			ss << "Unable to decompress string: Huffman table does not exist for character " << Hex(last) << ".";
 			throw std::runtime_error(ss.str());
 		}
 		last = m_trees[last]->DecodeChar(bb);
 		decompressed.push_back(last);
-	} while (last != 0x55 && bb.getBytePosition() < compressed.size());
+	} while (last != eos_marker && bb.getBytePosition() < compressed.size());
 	return decompressed;
 }
 

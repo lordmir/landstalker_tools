@@ -7,12 +7,15 @@
 #include <iterator>
 #include <functional>
 #include <sys/stat.h>
+#include <codecvt>
+#include <locale>
 
 #include <LSString.h>
 #include <IntroString.h>
 #include <EndCreditString.h>
 #include <HuffmanString.h>
 #include <HuffmanTrees.h>
+#include <Charset.h>
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
 
@@ -84,6 +87,7 @@ std::fstream OpenOutputFile(std::string filename, bool force)
 void ParseDecodedFile(const std::string& filename, const std::string& format, std::vector<std::shared_ptr<LSString>>& decoded)
 {
 	std::ifstream decodedfs;
+	std::wstring_convert<std::codecvt_utf8<LSString::StringType::value_type>> utf8_conv;
 	decodedfs.open(filename, std::ios::in);
 	if (decodedfs.good() == false)
 	{
@@ -94,6 +98,7 @@ void ParseDecodedFile(const std::string& filename, const std::string& format, st
 	else
 	{
 		std::string line;
+		std::wstring wline;
 		if (format == "intro" || format == "ending")
 		{
 			std::getline(decodedfs, line); // Discard header row
@@ -101,23 +106,24 @@ void ParseDecodedFile(const std::string& filename, const std::string& format, st
 		while (decodedfs.eof() == false)
 		{
 			std::getline(decodedfs, line);
+			wline = utf8_conv.from_bytes(line);
 			if (line.empty() == false)
 			{
 				if (format == "names")
 				{
-					decoded.push_back(std::make_shared<LSString>(line));
+					decoded.push_back(std::make_shared<LSString>(wline));
 				}
 				else if (format == "intro")
 				{
-					decoded.push_back(std::make_shared<IntroString>(line));
+					decoded.push_back(std::make_shared<IntroString>(wline));
 				}
 				else if (format == "ending")
 				{
-					decoded.push_back(std::make_shared<EndCreditString>(line));
+					decoded.push_back(std::make_shared<EndCreditString>(wline));
 				}
 				else if (format == "main")
 				{
-					decoded.push_back(std::make_shared<HuffmanString>(line, huffman_trees));
+					decoded.push_back(std::make_shared<HuffmanString>(wline, huffman_trees));
 				}
 			}
 		}
@@ -152,13 +158,14 @@ void ParseEncodedBuffer(const std::vector<uint8_t>& encoded, const std::string& 
 void WriteDecodedData(std::string filename, bool force, std::vector<std::shared_ptr<LSString>>& decoded)
 {
 	std::fstream decodedfs = OpenOutputFile(filename, force);
+	std::wstring_convert<std::codecvt_utf8<LSString::StringType::value_type>> utf8_conv;
 	if (decoded.front()->GetHeaderRow().length() > 0)
 	{
-		decodedfs << decoded.front()->GetHeaderRow() << std::endl;
+		decodedfs << utf8_conv.to_bytes(decoded.front()->GetHeaderRow()) << std::endl;
 	}
 	for (const auto& line : decoded)
 	{
-		decodedfs << line->Serialise() << std::endl;
+		decodedfs << utf8_conv.to_bytes(line->Serialise()) << std::endl;
 	}
 	decodedfs.close();
 }
@@ -300,7 +307,9 @@ int main(int argc, char** argv)
 			' ', "0.1");
 
 		std::vector<std::string> formats{ "main","intro","ending","names" };
-		TCLAP::ValuesConstraint<std::string> allowedVals(formats);
+		std::vector<std::string> languages{ "en","jp","fr","de" };
+		TCLAP::ValuesConstraint<std::string> allowedFormats(formats);
+		TCLAP::ValuesConstraint<std::string> allowedLangs(languages);
 
 		TCLAP::UnlabeledMultiArg<std::string> files("filenames", "The files to convert. If extracting binary data, then this must be a list of one "
 			                                                     "or more binary input files, followed by the output text filename. If encoding "
@@ -313,7 +322,8 @@ int main(int argc, char** argv)
 		TCLAP::ValueArg<std::string> hOffsetTable("t", "huffman_offset_table", "The file containing the Huffman table offsets.\n", false, "", "huffman_offsets");
 		TCLAP::ValueArg<uint32_t> hTableOff("U", "huffman_table_offset", "The offset in ROM to the Huffman compression tables.\n", false, 0, "offset");
 		TCLAP::ValueArg<uint32_t> hOffsetTableOff("T", "huffman_offset_table_offset", "The offset in ROM to the Huffman table offsets.\n", false, 0, "offset");
-		TCLAP::ValueArg<std::string> format("r", "format", "The string format to use.\n", true, "names", &allowedVals);
+		TCLAP::ValueArg<std::string> format("r", "format", "The string format to use.\n", true, "names", &allowedFormats);
+		TCLAP::ValueArg<std::string> language("l", "language", "The string language to use.\n", true, "en", &allowedLangs);
 		TCLAP::SwitchArg recalcHuffman("x", "recalc_huffman", "Recalculates the huffman tables and outputs the result to the files identified with the -u and -t flags.", false);
 		TCLAP::SwitchArg compress("c", "convert", "Converts the provided ASCII string table into binary data", false);
 		TCLAP::SwitchArg decompress("e", "extract", "Extracts the provided binary string data into an ASCII string table", false);

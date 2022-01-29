@@ -6,8 +6,8 @@
 #include <cstdlib>
 #include <memory>
 #include <string>
-#include <BitBarrel.h>
-#include <BitBarrelWriter.h>
+#include "BitBarrel.h"
+#include "BitBarrelWriter.h"
 
 class HuffmanTree
 {

@@ -1,36 +1,40 @@
 #include "EndCreditString.h"
 #include <stdexcept>
 #include <sstream>
+#include <cstring>
 
-const std::unordered_map<uint8_t, std::string> ENDING_CHARSET = {
-	{ 1, " "}, { 2, "A"}, { 3, "B"}, { 4, "C"}, { 5, "D"}, { 6, "E"}, { 7, "F"}, { 8, "G"},
-	{ 9, "H"}, {10, "I"}, {11, "J"}, {12, "K"}, {13, "L"}, {14, "M"}, {15, "N"}, {16, "O"},
-	{17, "P"}, {18, "Q"}, {19, "R"}, {20, "S"}, {21, "T"}, {22, "U"}, {23, "V"}, {24, "W"},
-	{25, "X"}, {26, "Y"}, {27, "Z"}, {28, "a"}, {29, "b"}, {30, "c"}, {31, "d"}, {32, "e"},
-	{33, "f"}, {34, "g"}, {35, "h"}, {36, "i"}, {37, "j"}, {38, "k"}, {39, "l"}, {40, "m"},
-	{41, "n"}, {42, "o"}, {43, "p"}, {44, "q"}, {45, "r"}, {46, "s"}, {47, "t"}, {48, "u"},
-	{49, "v"}, {50, "w"}, {51, "x"}, {52, "y"}, {53, "z"}, {54, "1"}, {55, "3"}, {56, "9"},
-	{57, "(C)"}, {58, "(3)"}, {59, "-"}, {60, ","}, {61, "."},
-	{64, "{K1}"}, {65, "{K2}"}, {66, "{K3}"}, {67, "{K4}"},
-	{128, "_"}, {129, "{UL1}" }, { 130, "{UL2}" },
-	{ 131, "{SEGA_LOGO}" }, {132, "{CLIMAX_LOGO}"}, {133, "{DDS520_LOGO}"}, {134, "{MIRAGE_LOGO}"}
+const LSString::CharacterSet ENDING_CHARSET = {
+	{ 1, L" "}, { 2, L"A"}, { 3, L"B"}, { 4, L"C"}, { 5, L"D"}, { 6, L"E"}, { 7, L"F"}, { 8, L"G"},
+	{ 9, L"H"}, {10, L"I"}, {11, L"J"}, {12, L"K"}, {13, L"L"}, {14, L"M"}, {15, L"N"}, {16, L"O"},
+	{17, L"P"}, {18, L"Q"}, {19, L"R"}, {20, L"S"}, {21, L"T"}, {22, L"U"}, {23, L"V"}, {24, L"W"},
+	{25, L"X"}, {26, L"Y"}, {27, L"Z"}, {28, L"a"}, {29, L"b"}, {30, L"c"}, {31, L"d"}, {32, L"e"},
+	{33, L"f"}, {34, L"g"}, {35, L"h"}, {36, L"i"}, {37, L"j"}, {38, L"k"}, {39, L"l"}, {40, L"m"},
+	{41, L"n"}, {42, L"o"}, {43, L"p"}, {44, L"q"}, {45, L"r"}, {46, L"s"}, {47, L"t"}, {48, L"u"},
+	{49, L"v"}, {50, L"w"}, {51, L"x"}, {52, L"y"}, {53, L"z"}, {54, L"1"}, {55, L"3"}, {56, L"9"},
+	{57, L"(C)"}, {58, L"(3)"}, {59, L"-"}, {60, L","}, {61, L"."},
+	{64, L"{K1}"}, {65, L"{K2}"}, {66, L"{K3}"}, {67, L"{K4}"},
+	{128, L"_"}, {129, L"{UL1}" }, { 130, L"{UL2}" },
+	{131, L"{SEGA_LOGO}" }, {132, L"{CLIMAX_LOGO}"}, {133, L"{DDS520_LOGO}"}, {134, L"{MIRAGE_LOGO}"}
 };
 
 EndCreditString::EndCreditString()
-	: LSString(),
+	: LSString(ENDING_CHARSET),
 	m_height(0),
 	m_column(-1)
 {
 }
 
-EndCreditString::EndCreditString(int8_t fmt0, int8_t fmt1, const std::string& str)
-	: LSString(str),
+EndCreditString::EndCreditString(int8_t fmt0, int8_t fmt1, const EndCreditString::StringType& str)
+	: LSString(str, ENDING_CHARSET),
 	m_height(fmt0),
 	m_column(fmt1)
 {
 }
 
-EndCreditString::EndCreditString(const std::string& serialised)
+EndCreditString::EndCreditString(const EndCreditString::StringType& serialised)
+	: LSString(ENDING_CHARSET),
+	m_height(0),
+	m_column(-1)
 {
 	Deserialise(serialised);
 }
@@ -88,29 +92,30 @@ size_t EndCreditString::Encode(uint8_t* buffer, size_t size) const
 	return ret;
 }
 
-std::string EndCreditString::Serialise() const
+EndCreditString::StringType EndCreditString::Serialise() const
 {
-	std::ostringstream ss;
+	std::basic_ostringstream<EndCreditString::StringType::value_type> ss;
 	ss << static_cast<int>(m_height) << "\t";
 	ss << -static_cast<int>(m_column) << "\t";
 	ss << m_str;
 	return ss.str();
 }
 
-void EndCreditString::Deserialise(const std::string& in)
+void EndCreditString::Deserialise(const EndCreditString::StringType& in)
 {
-	std::istringstream liness(in);
-	std::string cell;
-	std::getline(liness, cell, '\t');
-	m_height = std::atoi(cell.c_str());
-	std::getline(liness, cell, '\t');
-	m_column = -std::atoi(cell.c_str());
-	std::getline(liness, m_str, '\t');
+	std::basic_istringstream<EndCreditString::StringType::value_type> liness(in);
+	EndCreditString::StringType cell;
+	std::getline<EndCreditString::StringType::value_type>(liness, cell, '\t');
+	m_height = std::stoi(cell);
+	std::getline<EndCreditString::StringType::value_type>(liness, cell, '\t');
+	m_column = -std::stoi(cell);
+	std::getline<EndCreditString::StringType::value_type>(liness, m_str, '\t');
 }
 
-std::string EndCreditString::GetHeaderRow() const
+EndCreditString::StringType EndCreditString::GetHeaderRow() const
 {
-	return "Height\tColumn\tString";
+	const char* ret = "Height\tColumn\tString";
+	return EndCreditString::StringType(ret, ret + strlen(ret));
 }
 
 uint8_t EndCreditString::GetHeight() const
@@ -125,7 +130,7 @@ uint8_t EndCreditString::GetColumn() const
 
 size_t EndCreditString::DecodeString(const uint8_t* string, size_t len)
 {
-	m_str = "";
+	m_str.clear();
 	const uint8_t* c = string;
 	while (*c != 0x00)
 	{
@@ -148,9 +153,4 @@ size_t EndCreditString::EncodeString(uint8_t* string, size_t len) const
 	}
 	string[i] = 0x00;
 	return i + 1;
-}
-
-const std::unordered_map<uint8_t, std::string>& EndCreditString::Charmap() const
-{
-	return ENDING_CHARSET;
 }
