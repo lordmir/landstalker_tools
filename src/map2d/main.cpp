@@ -120,7 +120,7 @@ bool processInputFile(std::vector<uint8_t>& data, std::unique_ptr<Tilemap2D>& ma
 	else if (format == "cbs")
 	{
 		// Compressed blockset
-		std::vector<Block> blocks;
+		std::vector<MapBlock> blocks;
 		height = BlocksetCmp::Decode(data.data(), data.size(), blocks);
 		if (height > 0)
 		{
@@ -228,7 +228,7 @@ bool convertMap(std::vector<uint8_t>& outbuffer, std::unique_ptr<Tilemap2D>& map
 	else if (format == "cbs")
 	{
 		// Compressed blockset
-		std::vector<Block> blocks;
+		std::vector<MapBlock> blocks;
 		for (std::size_t y = 0; y < height; ++y)
 		{
 			std::vector<Tile> block(4);
@@ -236,7 +236,7 @@ bool convertMap(std::vector<uint8_t>& outbuffer, std::unique_ptr<Tilemap2D>& map
 			{
 				block[x] = map2d->GetTile(x, y);
 			}
-			blocks.push_back(Block(block.begin(), block.end()));
+			blocks.push_back(MapBlock(block.begin(), block.end()));
 		}
 		outbuffer.resize(65536);
 		size_t outsize = BlocksetCmp::Encode(blocks, outbuffer.data(), outbuffer.size());
