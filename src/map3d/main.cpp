@@ -11,10 +11,11 @@
 
 #include <sys/stat.h>
 
+#include <landstalker_tools.h>
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
 #include <rapidcsv.h>
-#include <Tilemap3DCmp.h>
+#include <landstalker/Tilemap3DCmp.h>
 
 bool fileExists(const std::string& filename)
 {
@@ -337,7 +338,7 @@ int main(int argc, char** argv)
 		TCLAP::CmdLine cmd("Utility for converting 3D room tilemaps between compressed binary and CSV.\n"
 			"Part of the landstalker_tools set: github.com/lordmir/landstalker_tools\n"
 			" - Written by LordMir, June 2020",
-			' ', "0.1");
+			' ', XSTR(VERSION_MAJOR) "." XSTR(VERSION_MINOR) "." XSTR(VERSION_PATCH));
 
 		std::vector<std::string> formats{ "csv","map","lz77","rle","cbs" };
 		TCLAP::ValuesConstraint<std::string> allowedVals(formats);

@@ -5,9 +5,9 @@
 #include <numeric>
 #include <algorithm>
 
-#include "LZ77.h"
-#include "Tilemap2DRLE.h"
-#include "Utils.h"
+#include <landstalker/LZ77.h>
+#include <landstalker/Tilemap2DRLE.h>
+#include <landstalker/Utils.h>
 
 
 Tilemap2D::Tilemap2D(size_t width, size_t height, size_t base)

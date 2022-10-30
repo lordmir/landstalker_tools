@@ -1,4 +1,4 @@
-#include "TileAttributes.h"
+#include <landstalker/TileAttributes.h>
 
 #include <stdexcept>
 

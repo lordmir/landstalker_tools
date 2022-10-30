@@ -9,14 +9,15 @@
 
 #include <sys/stat.h>
 
+#include <landstalker_tools.h>
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
 #include <rapidcsv.h>
-#include <LZ77.h>
-#include <Tilemap2DRLE.h>
-#include <Tile.h>
-#include <Block.h>
-#include <BlocksetCmp.h>
+#include <landstalker/LZ77.h>
+#include <landstalker/Tilemap2DRLE.h>
+#include <landstalker/Tile.h>
+#include <landstalker/Block.h>
+#include <landstalker/BlocksetCmp.h>
 
 bool validateParams(const std::string& format_in, TCLAP::ValueArg<uint32_t>& offset_in, TCLAP::ValueArg<std::size_t>& width_in, TCLAP::ValueArg<std::size_t>& height_in, std::size_t& width_out, std::size_t& height_out)
 {
@@ -330,7 +331,7 @@ int main(int argc, char** argv)
 		TCLAP::CmdLine cmd("Utility for converting 2D tilemaps and blocksets between binary, compressed binary and CSV.\n"
 			"Part of the landstalker_tools set: github.com/lordmir/landstalker_tools\n"
 			" - Written by LordMir, June 2020",
-			' ', "0.1");
+			' ', XSTR(VERSION_MAJOR) "." XSTR(VERSION_MINOR) "." XSTR(VERSION_PATCH));
 
 		std::vector<std::string> formats{"csv","map","lz77","rle","cbs"};
 		TCLAP::ValuesConstraint<std::string> allowedVals(formats);

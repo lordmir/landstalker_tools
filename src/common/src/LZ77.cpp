@@ -1,11 +1,11 @@
-#include "LZ77.h"
+#include <landstalker/LZ77.h>
 #include <cstring>
 #include <stdexcept>
 #include <sstream>
 #include <algorithm>
 #include <cassert>
 
-#include "BitBarrel.h"
+#include <landstalker/BitBarrel.h>
 #include <iostream>
 #include <iomanip>
 

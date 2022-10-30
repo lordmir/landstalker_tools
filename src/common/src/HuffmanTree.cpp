@@ -1,4 +1,4 @@
-#include "HuffmanTree.h"
+#include <landstalker/HuffmanTree.h>
 #include <iostream>
 #include <queue>
 #include <algorithm>

@@ -1,4 +1,4 @@
-#include "Tilemap3DCmp.h"
+#include <landstalker/Tilemap3DCmp.h>
 
 #include <stdexcept>
 #include <unordered_map>
@@ -9,8 +9,8 @@
 #include <algorithm>
 #include <iostream>
 
-#include "BitBarrel.h"
-#include "BitBarrelWriter.h"
+#include <landstalker/BitBarrel.h>
+#include <landstalker/BitBarrelWriter.h>
 
 uint16_t getCodedNumber(BitBarrel& bb)
 {

@@ -9,9 +9,11 @@
 
 #include <sys/stat.h>
 
+#include <landstalker_tools.h>
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
-#include <LZ77.h>
+#include <landstalker/LZ77.h>
+
 
 int main(int argc, char** argv)
 {
@@ -20,7 +22,7 @@ int main(int argc, char** argv)
 		TCLAP::CmdLine cmd("Utility for compressing/decompressing LZ77 graphics.\n"
 		                   "Part of the landstalker_tools set: github.com/lordmir/landstalker_tools\n"
 						   " - Written by LordMir, June 2020",
-						   ' ', "0.1");
+						   ' ', XSTR(VERSION_MAJOR) "." XSTR(VERSION_MINOR) "." XSTR(VERSION_PATCH));
 						   
 		TCLAP::UnlabeledValueArg<std::string> fileIn("input_file", "The input file (.lz77/.bin)", true, "", "in_filename");
 		TCLAP::UnlabeledValueArg<std::string> fileOut("output_file", "The output file (.lz77/.bin)", true, "", "out_filename");

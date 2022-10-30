@@ -1,4 +1,4 @@
-#include "IntroString.h"
+#include <landstalker/IntroString.h>
 #include <stdexcept>
 #include <sstream>
 #include <algorithm>

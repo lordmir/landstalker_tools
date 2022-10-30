@@ -1,13 +1,13 @@
-#include "HuffmanTrees.h"
+#include <landstalker/HuffmanTrees.h>
 #include <stdexcept>
 #include <iomanip>
 #include <sstream>
 #include <iostream>
 #include <algorithm>
 
-#include "BitBarrel.h"
-#include "BitBarrelWriter.h"
-#include "Utils.h"
+#include <landstalker/BitBarrel.h>
+#include <landstalker/BitBarrelWriter.h>
+#include <landstalker/Utils.h>
 
 HuffmanTrees::HuffmanTrees()
 	: m_num_chars(0)

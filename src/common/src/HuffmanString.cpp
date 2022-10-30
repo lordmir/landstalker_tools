@@ -1,4 +1,4 @@
-#include "HuffmanString.h"
+#include <landstalker/HuffmanString.h>
 #include <stdexcept>
 
 HuffmanString::HuffmanString(const uint8_t* data, size_t len, std::shared_ptr<HuffmanTrees> ht,

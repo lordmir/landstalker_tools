@@ -1,4 +1,4 @@
-#include "BlocksetCmp.h"
+#include <landstalker/BlocksetCmp.h>
 
 #include <cstdint>
 #include <cstdlib>
@@ -12,10 +12,10 @@
 #include <sstream>
 #include <cassert>
 #include <stdexcept>
-#include "BitBarrel.h"
-#include "BitBarrelWriter.h"
-#include "Block.h"
-#include "TileAttributes.h"
+#include <landstalker/BitBarrel.h>
+#include <landstalker/BitBarrelWriter.h>
+#include <landstalker/Block.h>
+#include <landstalker/TileAttributes.h>
 
 template<class T, size_t N>
 class TileQueue

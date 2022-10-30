@@ -1,4 +1,4 @@
-#include "BitBarrelWriter.h"
+#include <landstalker/BitBarrelWriter.h>
 
 #include <climits>
 

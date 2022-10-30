@@ -10,6 +10,7 @@
 
 #include <sys/stat.h>
 
+#include <landstalker_tools.h>
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
 
@@ -53,7 +54,7 @@ int main(int argc, char** argv)
 		TCLAP::CmdLine cmd("Utility for converting Genesis / Landstalker palettes to/from Tile Layer Pro format.\n"
 			"Part of the landstalker_tools set: github.com/lordmir/landstalker_tools\n"
 			" - Written by LordMir, June 2020",
-			' ', "0.1");
+			' ', XSTR(VERSION_MAJOR) "." XSTR(VERSION_MINOR) "." XSTR(VERSION_PATCH));
 
 		TCLAP::UnlabeledValueArg<std::string> fileIn("input_file", "The input file (.pal/.tpl)", true, "", "in_filename");
 		TCLAP::UnlabeledValueArg<std::string> fileOut("output_file", "The output file (.pal/.tpl)", true, "", "out_filename");

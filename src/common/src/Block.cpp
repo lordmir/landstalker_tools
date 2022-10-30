@@ -1,4 +1,4 @@
-#include "Block.h"
+#include <landstalker/Block.h>
 #include <vector>
 #include <cassert>
 #include <sstream>

@@ -1,4 +1,4 @@
-#include "EndCreditString.h"
+#include <landstalker/EndCreditString.h>
 #include <stdexcept>
 #include <sstream>
 #include <cstring>

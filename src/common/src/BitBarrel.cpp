@@ -1,4 +1,4 @@
-#include "BitBarrel.h"
+#include <landstalker/BitBarrel.h>
 
 #include <climits>
 #include <stdexcept>

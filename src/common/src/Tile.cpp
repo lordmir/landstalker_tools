@@ -1,7 +1,7 @@
-#include "Tile.h"
+#include <landstalker/Tile.h>
 #include <sstream>
 #include <iomanip>
-#include "Utils.h"
+#include <landstalker/Utils.h>
 
 Tile::Tile()
 : m_attrs(),

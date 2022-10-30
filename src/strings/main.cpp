@@ -10,12 +10,13 @@
 #include <codecvt>
 #include <locale>
 
-#include <LSString.h>
-#include <IntroString.h>
-#include <EndCreditString.h>
-#include <HuffmanString.h>
-#include <HuffmanTrees.h>
-#include <Charset.h>
+#include <landstalker_tools.h>
+#include <landstalker/LSString.h>
+#include <landstalker/IntroString.h>
+#include <landstalker/EndCreditString.h>
+#include <landstalker/HuffmanString.h>
+#include <landstalker/HuffmanTrees.h>
+#include <landstalker/Charset.h>
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
 
@@ -304,7 +305,7 @@ int main(int argc, char** argv)
 		TCLAP::CmdLine cmd("Utility for converting strings between different formats.\n"
 			"Part of the landstalker_tools set: github.com/lordmir/landstalker_tools\n"
 			" - Written by LordMir, June 2020",
-			' ', "0.1");
+			' ', XSTR(VERSION_MAJOR) "." XSTR(VERSION_MINOR) "." XSTR(VERSION_PATCH));
 
 		std::vector<std::string> formats{ "main","intro","ending","names" };
 		std::vector<std::string> languages{ "en","jp","fr","de" };

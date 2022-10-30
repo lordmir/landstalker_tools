@@ -1,4 +1,4 @@
-#include "LSString.h"
+#include <landstalker/LSString.h>
 
 #include <stdexcept>
 #include <unordered_map>
