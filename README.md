@@ -1,5 +1,21 @@
 # landstalker_tools
 A collection of tools to allow users to edit the compressed/encoded assets found in Landstalker and other games.
+
+## Installation
+### Requirements
+* CMake version 3.13 or greater is required: https://cmake.org/install/
+* A C++ compiler that supports C++17 (gcc 7.3 or MSVC2019)
+
+## Linux
+1. Run the `configure.sh` script
+2. Run the `build.sh` script to build the binaries
+3. (If desired), run the `install.sh` script to install the binaries to the system
+
+## Windows
+1. Run the `configure.bat` script
+2. Run the `build.bat` script to build the binaries
+3. (If desired), run the `install.bat` script to install the binaries to the system
+
 ## Tools
 ### LZ77
 A simple command-line tool to compress and decompress LZ77 data.
