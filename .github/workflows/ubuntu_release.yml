@@ -30,12 +30,6 @@ jobs:
                 gcc-11 \
                 g++-11 \
                 build-essential \
-                libgtk-3-dev \
-                libgl1-mesa-dev \
-                libglu1-mesa-dev \
-                libcurl4-openssl-dev \
-                libpng-dev \
-                zlib1g-dev \
                 cmake
              sudo apt-get remove libunwind-*
              sudo apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev

@@ -12,7 +12,7 @@
 #include <landstalker_tools.h>
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
-#include <landstalker/LZ77.h>
+#include <landstalker/misc/LZ77.h>
 
 
 int main(int argc, char** argv)
@@ -114,11 +114,11 @@ int main(int argc, char** argv)
 
 		if (decompress.isSet() == true)
 		{
-			outlen = LZ77::Decode(input.data() + inOffset.getValue(), input.size() - inOffset.getValue(), outbuffer.data(), inlen);
+			outlen = Landstalker::LZ77::Decode(input.data() + inOffset.getValue(), input.size() - inOffset.getValue(), outbuffer.data(), inlen);
 		}
 		else
 		{
-			outlen = LZ77::Encode(input.data() + inOffset.getValue(), input.size() - inOffset.getValue(), outbuffer.data());
+			outlen = Landstalker::LZ77::Encode(input.data() + inOffset.getValue(), input.size() - inOffset.getValue(), outbuffer.data());
 		}
 
 		// Finally, write-out

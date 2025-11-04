@@ -15,7 +15,7 @@
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
 #include <rapidcsv.h>
-#include <landstalker/Tilemap3DCmp.h>
+#include <landstalker/3d_maps/Tilemap3DCmp.h>
 
 bool fileExists(const std::string& filename)
 {
@@ -65,69 +65,90 @@ std::fstream openCSVFile(const std::string& filename, bool write, bool force)
 	return fs;
 }
 
-void ConvertMapToCSV(const RoomTilemap& rt, std::ostream& bg, std::ostream& fg, std::ostream& hm)
+void ConvertMapToCSV(const Landstalker::Tilemap3D& rt, std::ostream& bg, std::ostream& fg, std::ostream& hm)
 {
-	for (int i = 0; i < rt.width * rt.height; ++i)
+	for (int i = 0, y = 0; y < rt.GetHeight(); ++y)
 	{
-		fg << rt.foreground[i];
-		bg << rt.background[i];
-		if ((i + 1) % rt.width == 0)
+		for (int x = 0; x < rt.GetWidth(); ++x)
 		{
-			fg << std::endl;
-			bg << std::endl;
-		}
-		else
-		{
-			fg << ",";
-			bg << ",";
+			fg << rt.GetBlock({x, y}, Landstalker::Tilemap3D::Layer::FG);
+			bg << rt.GetBlock({x, y}, Landstalker::Tilemap3D::Layer::BG);
+			if(x + 1 < rt.GetWidth() && y + 1 < rt.GetHeight())
+			{
+				fg << ",";
+				bg << ",";
+			}
+			if ((x + 1) == rt.GetWidth())
+			{
+				fg << std::endl;
+				bg << std::endl;
+			}
 		}
 	}
-	hm << static_cast<int>(rt.left) << "," << static_cast<int>(rt.top) << std::endl;
-	for (int i = 0; i < rt.hmwidth * rt.hmheight; ++i)
+	hm << static_cast<int>(rt.GetLeft()) << "," << static_cast<int>(rt.GetTop()) << std::endl;
+	for (int y = 0; y < rt.GetHeightmapHeight(); ++y)
 	{
-		hm << rt.heightmap[i];
-		if ((i + 1) % rt.hmwidth == 0)
+		for (int x = 0; x < rt.GetHeightmapWidth(); ++x)
 		{
-			hm << std::endl;
-		}
-		else
-		{
-			hm << ",";
+			hm << rt.GetHeightmapCell({x, y});
+			if(x + 1 < rt.GetHeightmapWidth() && y + 1 < rt.GetHeightmapHeight())
+			{
+				fg << ",";
+				bg << ",";
+			}
+			if ((x + 1) == rt.GetHeightmapWidth())
+			{
+				fg << std::endl;
+				bg << std::endl;
+			}
 		}
 	}
 }
 
-RoomTilemap GetMapFromCSV(std::istream& bg, std::istream& fg, std::istream& hm)
+Landstalker::Tilemap3D GetMapFromCSV(std::istream& bg, std::istream& fg, std::istream& hm)
 {
-	RoomTilemap rt;
+	Landstalker::Tilemap3D rt;
 
 	rapidcsv::Document fgCsv(fg, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams(), rapidcsv::ConverterParams(true, -1.0, -1));
 	rapidcsv::Document bgCsv(bg, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams(), rapidcsv::ConverterParams(true, -1.0, -1));
 	rapidcsv::Document hmCsv(hm, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams(), rapidcsv::ConverterParams(true, -1.0, -1));
-	rt.width = static_cast<uint8_t>(fgCsv.GetColumnCount());
-	rt.height = static_cast<uint8_t>(fgCsv.GetRowCount());
 	// Test to see if last row is empty
-	while (fgCsv.GetRow<std::string>(rt.height - 1).size() < rt.width)
+	uint8_t fgwidth = static_cast<uint8_t>(fgCsv.GetColumnCount());
+	uint8_t fgheight = static_cast<uint8_t>(fgCsv.GetRowCount());
+	if (fgheight == 0 || fgwidth == 0)
 	{
-		rt.height--;
+		throw std::runtime_error("Error: CSV malformed");
 	}
+	while (fgCsv.GetRow<std::string>(fgheight - 1).size() < fgwidth)
+	{
+		fgheight--;
+	}
+	rt.SetTileDims(fgwidth, fgheight);
 	uint8_t bgwidth = static_cast<uint8_t>(bgCsv.GetColumnCount());
 	uint8_t bgheight = static_cast<uint8_t>(bgCsv.GetRowCount());
+	if (bgheight == 0 || bgwidth == 0)
+	{
+		throw std::runtime_error("Error: CSV malformed");
+	}
 	while (bgCsv.GetRow<std::string>(bgheight - 1).size() < bgwidth)
 	{
 		bgheight--;
 	}
-	if ((rt.width <= 0 || rt.height <= 0) || (rt.width != bgwidth || rt.height != bgheight))
+	if (fgwidth != bgwidth || fgheight != bgheight)
 	{
 		throw std::runtime_error("Error: CSV malformed");
 	}
-	rt.hmheight = static_cast<uint8_t>(hmCsv.GetRowCount()) - 1;
-	rt.hmwidth = static_cast<uint8_t>(hmCsv.GetRow<std::string>(1).size());
-	while (hmCsv.GetRow<std::string>(rt.hmheight).size() < rt.hmwidth)
+	if(hmCsv.GetRowCount() < 2)
 	{
-		rt.hmheight--;
+		throw std::runtime_error("Error: CSV malformed");
 	}
-	if (rt.hmwidth <= 0 || rt.hmheight <= 0)
+	uint8_t hmheight = static_cast<uint8_t>(hmCsv.GetRowCount()) - 1;
+	uint8_t hmwidth = static_cast<uint8_t>(hmCsv.GetRow<std::string>(1).size());
+	while (hmCsv.GetRow<std::string>(hmheight).size() < hmwidth)
+	{
+		hmheight--;
+	}
+	if (hmwidth == 0 || hmheight == 0)
 	{
 		throw std::runtime_error("Error: CSV malformed");
 	}
@@ -137,13 +158,14 @@ RoomTilemap GetMapFromCSV(std::istream& bg, std::istream& fg, std::istream& hm)
 	{
 		throw std::runtime_error("Error: CSV malformed");
 	}
-	rt.left = static_cast<uint8_t>(left);
-	rt.top = static_cast<uint8_t>(top);
-	std::cout << "Map: " << (int)rt.width << "x" << (int)rt.height << " " << (int)rt.left << "," << (int)rt.top
-		<< " Heightmap: " << (int)rt.hmwidth << "x" << (int)rt.hmheight << std::endl;
-	for (size_t y = 0; y < rt.height; ++y)
+	rt.SetLeft(static_cast<uint8_t>(left));
+	rt.SetTop(static_cast<uint8_t>(top));
+	rt.ResizeHeightmap(hmwidth, hmheight);
+	std::cout << "Map: " << (int)rt.GetWidth() << "x" << (int)rt.GetHeight() << " " << (int)rt.GetLeft() << "," << (int)rt.GetTop()
+		<< " Heightmap: " << (int)rt.GetHeightmapWidth() << "x" << (int)rt.GetHeightmapHeight() << std::endl;
+	for (size_t y = 0; y < rt.GetHeight(); ++y)
 	{
-		for (size_t x = 0; x < rt.width; ++x)
+		for (size_t x = 0; x < rt.GetWidth(); ++x)
 		{
 			int btemp = bgCsv.GetCell<int>(x, y);
 			int ftemp = fgCsv.GetCell<int>(x, y);
@@ -151,20 +173,20 @@ RoomTilemap GetMapFromCSV(std::istream& bg, std::istream& fg, std::istream& hm)
 			{
 				throw std::runtime_error("Error: CSV malformed");
 			}
-			rt.foreground.push_back(static_cast<uint16_t>(ftemp));
-			rt.background.push_back(static_cast<uint16_t>(btemp));
+			rt.SetBlock({static_cast<uint16_t>(btemp), Landstalker::IsoPoint2D(x, y)}, Landstalker::Tilemap3D::Layer::BG);
+			rt.SetBlock({static_cast<uint16_t>(ftemp), Landstalker::IsoPoint2D(x, y)}, Landstalker::Tilemap3D::Layer::FG);
 		}
 	}
-	for (size_t y = 1; y <= rt.hmheight; ++y)
+	for (int y = 1; y <= static_cast<int>(rt.GetHeightmapHeight()); ++y)
 	{
-		for (size_t x = 0; x < rt.hmwidth; ++x)
+		for (int x = 0; x < static_cast<int>(rt.GetHeightmapWidth()); ++x)
 		{
 			int htemp = hmCsv.GetCell<int>(x, y);
 			if (htemp == -1)
 			{
 				throw std::runtime_error("Error: CSV malformed");
 			}
-			rt.heightmap.push_back(static_cast<uint16_t>(htemp));
+			rt.SetHeightmapCell({x, y - 1}, static_cast<uint16_t>(htemp));
 		}
 	}
 
@@ -198,10 +220,9 @@ int romtest(const std::string& infilename, const std::string& outfilename)
 	for (auto it = map_offsets.begin(); it != map_offsets.end(); ++it)
 	{
 		std::cout << std::hex << *it << std::dec << std::endl;
-		RoomTilemap rt;
-		orig_size += Tilemap3DCmp::Decode(rom.data() + *it, rt);
+		Landstalker::Tilemap3D rt(rom.data() + *it);
 
-		std::cout << (unsigned)rt.GetWidth() << "x" << (unsigned)rt.GetHeight() << ": " << rt.background.size() << std::endl;
+		std::cout << (unsigned)rt.GetWidth() << "x" << (unsigned)rt.GetHeight() << ": " << rt.GetHeightmapSize() << std::endl;
 
 		std::vector<uint8_t> result(65536);
 		std::ofstream bgofs("bg.csv");
@@ -211,35 +232,26 @@ int romtest(const std::string& infilename, const std::string& outfilename)
 		std::ifstream bgifs("bg.csv");
 		std::ifstream fgifs("fg.csv");
 		std::ifstream hmifs("hm.csv");
-		RoomTilemap rtt = GetMapFromCSV(bgifs, fgifs, hmifs);
-		result.resize(Tilemap3DCmp::Encode(rtt,result.data(),result.size()));
+		Landstalker::Tilemap3D rtt = GetMapFromCSV(bgifs, fgifs, hmifs);
+		result.resize(rtt.Encode(result.data(), result.size()));
 		std::cout << "Recompressed size " << result.size() << " bytes." << std::endl;
-		RoomTilemap rt2;
-		Tilemap3DCmp::Decode(result.data(), rt2);
-		uncompressed_size += rt.background.size() * 4 + rt.heightmap.size() * 2 + 6;
+		Landstalker::Tilemap3D rt2(result.data());
+		uncompressed_size += rt.GetSize() * 4 + rt.GetHeightmapSize() * 2 + 6;
 		size += result.size();
-		std::cout << (unsigned)rt.GetWidth() << "x" << (unsigned)rt.GetHeight() << ": " << rt.background.size() << std::endl;
+		std::cout << (unsigned)rt.GetWidth() << "x" << (unsigned)rt.GetHeight() << ": " << rt.GetSize() / 2 << std::endl;
 
-		bool pass = ((rt.GetWidth() == rt2.GetWidth()) &&
-			(rt.GetHeight() == rt2.GetHeight()) &&
-			(rt.GetLeft() == rt2.GetLeft()) &&
-			(rt.GetTop() == rt2.GetTop()) &&
-			(rt.hmwidth == rt2.hmwidth) &&
-			(rt.hmheight == rt2.hmheight) &&
-			(rt.background == rt2.background) &&
-			(rt.foreground == rt2.foreground) &&
-			(rt.heightmap == rt2.heightmap));
+		bool pass = rt == rt2;
 		if (pass == false)
 		{
 			std::cout << "Width:      " << (rt.GetWidth() == rt2.GetWidth() ? "OK" : "MISMATCH") << std::endl;
 			std::cout << "Height:     " << (rt.GetHeight() == rt2.GetHeight() ? "OK" : "MISMATCH") << std::endl;
 			std::cout << "Left:       " << (rt.GetLeft() == rt2.GetLeft() ? "OK" : "MISMATCH") << std::endl;
 			std::cout << "Top:        " << (rt.GetTop() == rt2.GetTop() ? "OK" : "MISMATCH") << std::endl;
-			std::cout << "HM-Width:   " << (rt.hmwidth == rt2.hmwidth ? "OK" : "MISMATCH") << std::endl;
-			std::cout << "HM-Height:  " << (rt.hmheight == rt2.hmheight ? "OK" : "MISMATCH") << std::endl;
-			std::cout << "Background: " << (rt.background == rt2.background ? "OK" : "MISMATCH") << std::endl;
-			std::cout << "Foreground: " << (rt.foreground == rt2.foreground ? "OK" : "MISMATCH") << std::endl;
-			std::cout << "Heightmap:  " << (rt.heightmap == rt2.heightmap ? "OK" : "MISMATCH") << std::endl;
+			std::cout << "HM-Width:   " << (rt.GetHeightmapWidth() == rt2.GetHeightmapWidth() ? "OK" : "MISMATCH") << std::endl;
+			std::cout << "HM-Height:  " << (rt.GetHeightmapHeight() == rt2.GetHeightmapHeight() ? "OK" : "MISMATCH") << std::endl;
+			// std::cout << "Background: " << (rt.GetBackground() == rt2.GetBackground() ? "OK" : "MISMATCH") << std::endl;
+			// std::cout << "Foreground: " << (rt.GetForeground() == rt2.GetForeground() ? "OK" : "MISMATCH") << std::endl;
+			// std::cout << "Heightmap:  " << (rt.GetHeightmap() == rt2.GetHeightmap() ? "OK" : "MISMATCH") << std::endl;
 		}
 		std::cout << "Overall:   " << (pass ? "** OK **" : "** FAIL **") << std::endl;
 		cmaps.push_back(result);
@@ -296,7 +308,7 @@ int romtest(const std::string& infilename, const std::string& outfilename)
 	{
 		if (i % 16 == 0)
 		{
-			printf("%04X: ", i);
+			printf("%04zX: ", i);
 		}
 		printf("%02X ", cmaps[0][i]);
 		if (((i + 1) % 16 == 0) || (i == cmaps[0].size()))
@@ -438,18 +450,17 @@ int main(int argc, char** argv)
 		std::vector<uint8_t> outbuffer;
 		if (decompress.isSet() == true)
 		{
-			RoomTilemap rt;
-			Tilemap3DCmp::Decode(cmp.data(), rt);
-			std::cout << "Map: " << (int)rt.width << "x" << (int)rt.height << " " << (int)rt.left << "," << (int)rt.top
-				<< " Heightmap: " << (int)rt.hmwidth << "x" << (int)rt.hmheight << std::endl;
+			Landstalker::Tilemap3D rt(cmp.data());
+			std::cout << "Map: " << (int)rt.GetWidth() << "x" << (int)rt.GetHeight() << " " << (int)rt.GetLeft() << "," << (int)rt.GetTop()
+				<< " Heightmap: " << (int)rt.GetHeightmapWidth() << "x" << (int)rt.GetHeightmapHeight() << std::endl;
 			ConvertMapToCSV(rt, background, foreground, heightmap);
 		}
 		else
 		{
-			RoomTilemap rt = GetMapFromCSV(background, foreground, heightmap);
+			Landstalker::Tilemap3D rt = GetMapFromCSV(background, foreground, heightmap);
 
 			outbuffer.resize(65536);
-			size_t esize = Tilemap3DCmp::Encode(rt, outbuffer.data(), outbuffer.size());
+			size_t esize = rt.Encode(outbuffer.data(), outbuffer.size());
 			outbuffer.resize(esize);
 		}
 

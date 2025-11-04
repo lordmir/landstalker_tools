@@ -11,16 +11,16 @@
 #include <locale>
 
 #include <landstalker_tools.h>
-#include <landstalker/LSString.h>
-#include <landstalker/IntroString.h>
-#include <landstalker/EndCreditString.h>
-#include <landstalker/HuffmanString.h>
-#include <landstalker/HuffmanTrees.h>
-#include <landstalker/Charset.h>
+#include <landstalker/text/LSString.h>
+#include <landstalker/text/IntroString.h>
+#include <landstalker/text/EndCreditString.h>
+#include <landstalker/text/HuffmanString.h>
+#include <landstalker/text/HuffmanTrees.h>
+#include <landstalker/text/Charset.h>
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
 
-std::shared_ptr<HuffmanTrees> huffman_trees;
+std::shared_ptr<Landstalker::HuffmanTrees> huffman_trees;
 
 bool fileExists(const std::string& filename)
 {
@@ -85,10 +85,10 @@ std::fstream OpenOutputFile(std::string filename, bool force)
 	return decodedfs;
 }
 
-void ParseDecodedFile(const std::string& filename, const std::string& format, std::vector<std::shared_ptr<LSString>>& decoded)
+void ParseDecodedFile(const std::string& filename, const std::string& format, std::vector<std::shared_ptr<Landstalker::LSString>>& decoded)
 {
 	std::ifstream decodedfs;
-	std::wstring_convert<std::codecvt_utf8<LSString::StringType::value_type>> utf8_conv;
+	std::wstring_convert<std::codecvt_utf8<Landstalker::LSString::StringType::value_type>> utf8_conv;
 	decodedfs.open(filename, std::ios::in);
 	if (decodedfs.good() == false)
 	{
@@ -112,54 +112,54 @@ void ParseDecodedFile(const std::string& filename, const std::string& format, st
 			{
 				if (format == "names")
 				{
-					decoded.push_back(std::make_shared<LSString>(wline));
+					decoded.push_back(std::make_shared<Landstalker::LSString>(wline));
 				}
 				else if (format == "intro")
 				{
-					decoded.push_back(std::make_shared<IntroString>(wline));
+					decoded.push_back(std::make_shared<Landstalker::IntroString>(wline));
 				}
 				else if (format == "ending")
 				{
-					decoded.push_back(std::make_shared<EndCreditString>(wline));
+					decoded.push_back(std::make_shared<Landstalker::EndCreditString>(wline));
 				}
 				else if (format == "main")
 				{
-					decoded.push_back(std::make_shared<HuffmanString>(wline, huffman_trees));
+					decoded.push_back(std::make_shared<Landstalker::HuffmanString>(wline, huffman_trees));
 				}
 			}
 		}
 	}
 }
 
-void ParseEncodedBuffer(const std::vector<uint8_t>& encoded, const std::string& format, std::vector<std::shared_ptr<LSString>>& decoded)
+void ParseEncodedBuffer(const std::vector<uint8_t>& encoded, const std::string& format, std::vector<std::shared_ptr<Landstalker::LSString>>& decoded)
 {
 	size_t offset = 0;
 	while (offset < encoded.size())
 	{
 		if (format == "names")
 		{
-			decoded.push_back(std::make_shared<LSString>());
+			decoded.push_back(std::make_shared<Landstalker::LSString>());
 		}
 		else if (format == "intro")
 		{
-			decoded.push_back(std::make_shared<IntroString>());
+			decoded.push_back(std::make_shared<Landstalker::IntroString>());
 		}
 		else if (format == "ending")
 		{
-			decoded.push_back(std::make_shared<EndCreditString>());
+			decoded.push_back(std::make_shared<Landstalker::EndCreditString>());
 		}
 		else if (format == "main")
 		{
-			decoded.push_back(std::make_shared<HuffmanString>(huffman_trees));
+			decoded.push_back(std::make_shared<Landstalker::HuffmanString>(huffman_trees));
 		}
 		offset += decoded.back()->Decode(encoded.data() + offset, encoded.size() - offset);
 	}
 }
 
-void WriteDecodedData(std::string filename, bool force, std::vector<std::shared_ptr<LSString>>& decoded)
+void WriteDecodedData(std::string filename, bool force, std::vector<std::shared_ptr<Landstalker::LSString>>& decoded)
 {
 	std::fstream decodedfs = OpenOutputFile(filename, force);
-	std::wstring_convert<std::codecvt_utf8<LSString::StringType::value_type>> utf8_conv;
+	std::wstring_convert<std::codecvt_utf8<Landstalker::LSString::StringType::value_type>> utf8_conv;
 	if (decoded.front()->GetHeaderRow().length() > 0)
 	{
 		decodedfs << utf8_conv.to_bytes(decoded.front()->GetHeaderRow()) << std::endl;
@@ -171,7 +171,7 @@ void WriteDecodedData(std::string filename, bool force, std::vector<std::shared_
 	decodedfs.close();
 }
 
-void EncodeData(const std::vector<std::shared_ptr<LSString>>& decoded, std::string format, std::vector<std::vector<uint8_t>>& encoded)
+void EncodeData(const std::vector<std::shared_ptr<Landstalker::LSString>>& decoded, std::string format, std::vector<std::vector<uint8_t>>& encoded)
 {
 	size_t lines = 0;
 	size_t split = 0;
@@ -387,7 +387,7 @@ int main(int argc, char** argv)
 		}
 
 		std::vector<uint8_t> encoded;
-		std::vector<std::shared_ptr<LSString>> decoded;
+		std::vector<std::shared_ptr<Landstalker::LSString>> decoded;
 		std::vector<std::vector<uint8_t>> outbuffer;
 		std::string hufftablefile;
 		std::string huffofffile;
@@ -417,7 +417,7 @@ int main(int argc, char** argv)
 			std::vector<uint8_t> hufftrs;
 			CacheBinaryFile(huffofffile, huffoff, hOffsetTableOff.getValue());
 			CacheBinaryFile(hufftablefile, hufftrs, hTableOff.getValue());
-			huffman_trees = std::make_shared<HuffmanTrees>(huffoff.data(), huffoff.size(), hufftrs.data(), hufftrs.size(), huffoff.size() / 2);
+			huffman_trees = std::make_shared<Landstalker::HuffmanTrees>(huffoff.data(), huffoff.size(), hufftrs.data(), hufftrs.size(), huffoff.size() / 2);
 		}
 
 		if (decompress.isSet())
@@ -431,7 +431,7 @@ int main(int argc, char** argv)
 		{
 			if (recalcHuffman.isSet())
 			{
-				huffman_trees = std::make_shared<HuffmanTrees>();
+				huffman_trees = std::make_shared<Landstalker::HuffmanTrees>();
 			}
 			ParseDecodedFile(inFile, format.getValue(), decoded);
 			if (recalcHuffman.isSet())
