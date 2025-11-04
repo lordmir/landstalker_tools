@@ -1,4 +1,3 @@
 #! /bin/bash
 
-mkdir -p build
-cmake -S . -B build
+cmake -S . -B build -DLANDSTALKER_BUILD_SHARED=ON
