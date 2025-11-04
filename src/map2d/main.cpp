@@ -6,7 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <iterator>
-
+#include <memory>
 #include <sys/stat.h>
 
 #include <landstalker_tools.h>
@@ -19,7 +19,7 @@
 #include <landstalker/Block.h>
 #include <landstalker/BlocksetCmp.h>
 
-bool validateParams(const std::string& format_in, TCLAP::ValueArg<uint32_t>& offset_in, TCLAP::ValueArg<std::size_t>& width_in, TCLAP::ValueArg<std::size_t>& height_in, std::size_t& width_out, std::size_t& height_out)
+bool validateParams(const std::string& format_in, TCLAP::ValueArg<uint32_t>& offset_in, TCLAP::ValueArg<uint32_t>& width_in, TCLAP::ValueArg<uint32_t>& height_in, uint32_t& width_out, uint32_t& height_out)
 {
 	if (format_in == "map")
 	{
@@ -340,11 +340,11 @@ int main(int argc, char** argv)
 		TCLAP::UnlabeledValueArg<std::string> fileOut("output_file", "The output file (.map/.rle/.lz77/.csv/.cbs)", true, "", "out_filename");
 		TCLAP::ValueArg<std::string> inputFormat("i", "input_format", "Input format", true, "map", &allowedVals);
 		TCLAP::ValueArg<std::string> outputFormat("o", "output_format", "Output format", true, "csv", &allowedVals);
-		TCLAP::ValueArg<size_t> widthIn("w", "width", "Width of the 2D map in 8x8 tiles", false, 0, "width_tiles");
-		TCLAP::ValueArg<size_t> heightIn("", "height", "Height of the 2D map in 8x8 tiles", false, 0, "height_tiles");
-		TCLAP::ValueArg<size_t> leftIn("l", "left", "Left coordinate of the 2D map in 8x8 tiles", false, 0, "left_tiles");
-		TCLAP::ValueArg<size_t> topIn("t", "top", "Top coordinate of the 2D map in 8x8 tiles", false, 0, "top_tiles");
-		TCLAP::ValueArg<size_t> tileBaseIn("b", "base", "The tile base for the 2D map", false, 0, "tile_base");
+		TCLAP::ValueArg<uint32_t> widthIn("w", "width", "Width of the 2D map in 8x8 tiles", false, 0, "width_tiles");
+		TCLAP::ValueArg<uint32_t> heightIn("", "height", "Height of the 2D map in 8x8 tiles", false, 0, "height_tiles");
+		TCLAP::ValueArg<uint32_t> leftIn("l", "left", "Left coordinate of the 2D map in 8x8 tiles", false, 0, "left_tiles");
+		TCLAP::ValueArg<uint32_t> topIn("t", "top", "Top coordinate of the 2D map in 8x8 tiles", false, 0, "top_tiles");
+		TCLAP::ValueArg<uint32_t> tileBaseIn("b", "base", "The tile base for the 2D map", false, 0, "tile_base");
 		TCLAP::SwitchArg force("f", "force", "Force overwrite if file already exists and no offset has been set", false);
 		TCLAP::ValueArg<uint32_t> inOffset("", "inoffset", "Offset into the input file to start reading data, useful if working with the raw ROM", false, 0, "offset");
 		TCLAP::ValueArg<uint32_t> outOffset("", "outoffset", "Offset into the output file to start writing data, useful if working with the raw ROM.\n"
@@ -365,9 +365,9 @@ int main(int argc, char** argv)
 		cmd.parse(argc, argv);
 
 		std::vector<uint8_t> input;
-		std::size_t width = widthIn.getValue();
-		std::size_t height = heightIn.getValue();
-		std::size_t expected_input_size = 0;
+		uint32_t width = widthIn.getValue();
+		uint32_t height = heightIn.getValue();
+		uint32_t expected_input_size = 0;
 		std::unique_ptr<Tilemap2D> map2d;
 
 		validateParams(inputFormat.getValue(), inOffset, widthIn, heightIn, width, height);
