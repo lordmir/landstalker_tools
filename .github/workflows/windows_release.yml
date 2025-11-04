@@ -1,0 +1,50 @@
+name: build-release-windows
+
+on:
+  push:
+  release:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-release:
+    name: Windows release build
+    runs-on: windows-2022
+    env:
+      BUILD_TYPE: Release
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          path: landstalker_tools
+          submodules: 'recursive'
+
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.30.x'
+
+      - name: 'Build Release'
+        working-directory: ${{github.workspace}}/landstalker_tools
+        run: |
+          cmake -S . -B build -DLANDSTALKER_BUILD_SHARED=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+          cmake --install build --prefix ./release --config Release
+
+      - name: 'Build Debug'
+        working-directory: ${{github.workspace}}/landstalker_tools
+        run: |
+          cmake -S . -B build_debug -DLANDSTALKER_BUILD_SHARED=ON -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build_debug --config Debug
+          cmake --install build_debug --prefix ./debug --config Debug
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: landstalker_tools_binary_windows
+          path: |
+            ${{github.workspace}}/landstalker_tools/release
+            ${{github.workspace}}/landstalker_tools/debug

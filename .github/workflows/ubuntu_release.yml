@@ -1,0 +1,57 @@
+name: build-release-ubuntu
+
+on:
+  push:
+  release:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-release:
+    name: Linux release build
+    runs-on: ubuntu-latest
+    env:
+      BUILD_TYPE: Release
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          path: landstalker_tools
+          submodules: 'recursive'
+
+      - name: Install Dependencies
+        shell: bash
+        run: |
+             sudo apt-get update
+             sudo apt-get install -y \
+                gcc-11 \
+                g++-11 \
+                build-essential \
+                cmake
+             sudo apt-get remove libunwind-*
+             sudo apt-get install -y --no-install-recommends libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+
+      - name: 'Build Release'
+        working-directory: ${{github.workspace}}/landstalker_tools
+        run: |
+          cmake -S . -B build -DLANDSTALKER_BUILD_SHARED=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j32
+          cmake --install build --prefix ./release
+
+      - name: 'Build Debug'
+        working-directory: ${{github.workspace}}/landstalker_tools
+        run: |
+          cmake -S . -B build_debug -DLANDSTALKER_BUILD_SHARED=ON -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build_debug -j32
+          cmake --install build_debug --prefix ./debug
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: landstalker_tools_binary_ubuntu
+          path: |
+            ${{github.workspace}}/landstalker_tools/release
+            ${{github.workspace}}/landstalker_tools/debug

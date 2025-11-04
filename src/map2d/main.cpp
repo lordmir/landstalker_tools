@@ -6,20 +6,20 @@
 #include <sstream>
 #include <vector>
 #include <iterator>
-
+#include <memory>
 #include <sys/stat.h>
 
 #include <landstalker_tools.h>
 #define TCLAP_SETBASE_ZERO 1
 #include <tclap/CmdLine.h>
 #include <rapidcsv.h>
-#include <landstalker/LZ77.h>
-#include <landstalker/Tilemap2DRLE.h>
-#include <landstalker/Tile.h>
-#include <landstalker/Block.h>
-#include <landstalker/BlocksetCmp.h>
+#include <landstalker/misc/LZ77.h>
+#include <landstalker/2d_maps/Tilemap2DRLE.h>
+#include <landstalker/tileset/Tile.h>
+#include <landstalker/blockset/Block.h>
+#include <landstalker/blockset/BlocksetCmp.h>
 
-bool validateParams(const std::string& format_in, TCLAP::ValueArg<uint32_t>& offset_in, TCLAP::ValueArg<std::size_t>& width_in, TCLAP::ValueArg<std::size_t>& height_in, std::size_t& width_out, std::size_t& height_out)
+bool validateParams(const std::string& format_in, TCLAP::ValueArg<uint32_t>& offset_in, TCLAP::ValueArg<uint32_t>& width_in, TCLAP::ValueArg<uint32_t>& height_in, uint32_t& width_out, uint32_t& height_out)
 {
 	if (format_in == "map")
 	{
@@ -94,7 +94,7 @@ bool readFile(std::string filename, std::vector<uint8_t>& data, const std::strin
 	return true;
 }
 
-bool processInputFile(std::vector<uint8_t>& data, std::unique_ptr<Tilemap2D>& map2d, const std::string& format = "map", std::size_t base = 0, std::size_t width = 0, std::size_t height = 0)
+bool processInputFile(std::vector<uint8_t>& data, std::unique_ptr<Landstalker::Tilemap2D>& map2d, const std::string& format = "map", std::size_t base = 0, std::size_t width = 0, std::size_t height = 0)
 {
 	if (format == "map")
 	{
@@ -108,25 +108,25 @@ bool processInputFile(std::vector<uint8_t>& data, std::unique_ptr<Tilemap2D>& ma
 			std::cerr << "Warning: file size (" << data.size() << " bytes) is not an exact multiple of the map width. Excess bytes will be ignored." << std::endl;
 			data.resize(width * height * 2);
 		}
-		map2d = std::make_unique<Tilemap2D>(data, width, height, Tilemap2D::NONE, base);
+		map2d = std::make_unique<Landstalker::Tilemap2D>(data, width, height, Landstalker::Tilemap2D::Compression::NONE, base);
 	}
 	else if (format == "lz77")
 	{
-		map2d = std::make_unique<Tilemap2D>(data, Tilemap2D::LZ77, base);
+		map2d = std::make_unique<Landstalker::Tilemap2D>(data, Landstalker::Tilemap2D::Compression::LZ77, base);
 	}
 	else if (format == "rle")
 	{
-		map2d = std::make_unique<Tilemap2D>(data, Tilemap2D::RLE, base);
+		map2d = std::make_unique<Landstalker::Tilemap2D>(data, Landstalker::Tilemap2D::Compression::RLE, base);
 	}
 	else if (format == "cbs")
 	{
 		// Compressed blockset
-		std::vector<MapBlock> blocks;
-		height = BlocksetCmp::Decode(data.data(), data.size(), blocks);
+		std::vector<Landstalker::MapBlock> blocks;
+		height = Landstalker::BlocksetCmp::Decode(data.data(), data.size(), blocks);
 		if (height > 0)
 		{
 			width = 4;
-			map2d = std::make_unique<Tilemap2D>(width, height);
+			map2d = std::make_unique<Landstalker::Tilemap2D>(width, height);
 			for (size_t y = 0; y < blocks.size(); ++y)
 			{
 				for (size_t x = 0; x < width; ++x)
@@ -137,7 +137,7 @@ bool processInputFile(std::vector<uint8_t>& data, std::unique_ptr<Tilemap2D>& ma
 		}
 		else
 		{
-			map2d = std::make_unique<Tilemap2D>(0, 0);
+			map2d = std::make_unique<Landstalker::Tilemap2D>(0, 0);
 		}
 	}
 	else if (format == "csv")
@@ -145,7 +145,7 @@ bool processInputFile(std::vector<uint8_t>& data, std::unique_ptr<Tilemap2D>& ma
 		if (data.size() == 0)
 		{
 			// Special case - zero byte file.
-			map2d = std::make_unique<Tilemap2D>(0, 0);
+			map2d = std::make_unique<Landstalker::Tilemap2D>(0, 0);
 		}
 		else
 		{
@@ -158,7 +158,7 @@ bool processInputFile(std::vector<uint8_t>& data, std::unique_ptr<Tilemap2D>& ma
 			{
 				throw std::runtime_error("Error: CSV malformed");
 			}
-			map2d = std::make_unique<Tilemap2D>(width, height, base);
+			map2d = std::make_unique<Landstalker::Tilemap2D>(width, height, base);
 			for (size_t y = 0; y < height; y++)
 			{
 				for (size_t x = 0; x < width; x++)
@@ -204,7 +204,7 @@ bool validateOutputFile(const std::string& filename, TCLAP::ValueArg<uint32_t>& 
 	return true;
 }
 
-bool convertMap(std::vector<uint8_t>& outbuffer, std::unique_ptr<Tilemap2D>& map2d, const std::string& format, std::size_t left = 0, std::size_t top = 0)
+bool convertMap(std::vector<uint8_t>& outbuffer, std::unique_ptr<Landstalker::Tilemap2D>& map2d, const std::string& format, std::size_t left = 0, std::size_t top = 0)
 {
 	const std::size_t width = map2d->GetWidth();
 	const std::size_t height = map2d->GetHeight();
@@ -216,31 +216,31 @@ bool convertMap(std::vector<uint8_t>& outbuffer, std::unique_ptr<Tilemap2D>& map
 
 	if (format == "map")
 	{
-		map2d->GetBits(outbuffer, Tilemap2D::NONE);
+		map2d->GetBits(outbuffer, Landstalker::Tilemap2D::Compression::NONE);
 	}
 	else if (format == "rle")
 	{
-		map2d->GetBits(outbuffer, Tilemap2D::RLE);
+		map2d->GetBits(outbuffer, Landstalker::Tilemap2D::Compression::RLE);
 	}
 	else if (format == "lz77")
 	{
-		map2d->GetBits(outbuffer, Tilemap2D::LZ77);
+		map2d->GetBits(outbuffer, Landstalker::Tilemap2D::Compression::LZ77);
 	}
 	else if (format == "cbs")
 	{
 		// Compressed blockset
-		std::vector<MapBlock> blocks;
+		std::vector<Landstalker::MapBlock> blocks;
 		for (std::size_t y = 0; y < height; ++y)
 		{
-			std::vector<Tile> block(4);
+			std::vector<Landstalker::Tile> block(4);
 			for (std::size_t x = 0; x < width; ++x)
 			{
 				block[x] = map2d->GetTile(x, y);
 			}
-			blocks.push_back(MapBlock(block.begin(), block.end()));
+			blocks.push_back(Landstalker::MapBlock(block.begin(), block.end()));
 		}
 		outbuffer.resize(65536);
-		size_t outsize = BlocksetCmp::Encode(blocks, outbuffer.data(), outbuffer.size());
+		size_t outsize = Landstalker::BlocksetCmp::Encode(blocks, outbuffer.data(), outbuffer.size());
 		outbuffer.resize(outsize);
 	}
 	else if (format == "csv")
@@ -340,11 +340,11 @@ int main(int argc, char** argv)
 		TCLAP::UnlabeledValueArg<std::string> fileOut("output_file", "The output file (.map/.rle/.lz77/.csv/.cbs)", true, "", "out_filename");
 		TCLAP::ValueArg<std::string> inputFormat("i", "input_format", "Input format", true, "map", &allowedVals);
 		TCLAP::ValueArg<std::string> outputFormat("o", "output_format", "Output format", true, "csv", &allowedVals);
-		TCLAP::ValueArg<size_t> widthIn("w", "width", "Width of the 2D map in 8x8 tiles", false, 0, "width_tiles");
-		TCLAP::ValueArg<size_t> heightIn("", "height", "Height of the 2D map in 8x8 tiles", false, 0, "height_tiles");
-		TCLAP::ValueArg<size_t> leftIn("l", "left", "Left coordinate of the 2D map in 8x8 tiles", false, 0, "left_tiles");
-		TCLAP::ValueArg<size_t> topIn("t", "top", "Top coordinate of the 2D map in 8x8 tiles", false, 0, "top_tiles");
-		TCLAP::ValueArg<size_t> tileBaseIn("b", "base", "The tile base for the 2D map", false, 0, "tile_base");
+		TCLAP::ValueArg<uint32_t> widthIn("w", "width", "Width of the 2D map in 8x8 tiles", false, 0, "width_tiles");
+		TCLAP::ValueArg<uint32_t> heightIn("", "height", "Height of the 2D map in 8x8 tiles", false, 0, "height_tiles");
+		TCLAP::ValueArg<uint32_t> leftIn("l", "left", "Left coordinate of the 2D map in 8x8 tiles", false, 0, "left_tiles");
+		TCLAP::ValueArg<uint32_t> topIn("t", "top", "Top coordinate of the 2D map in 8x8 tiles", false, 0, "top_tiles");
+		TCLAP::ValueArg<uint32_t> tileBaseIn("b", "base", "The tile base for the 2D map", false, 0, "tile_base");
 		TCLAP::SwitchArg force("f", "force", "Force overwrite if file already exists and no offset has been set", false);
 		TCLAP::ValueArg<uint32_t> inOffset("", "inoffset", "Offset into the input file to start reading data, useful if working with the raw ROM", false, 0, "offset");
 		TCLAP::ValueArg<uint32_t> outOffset("", "outoffset", "Offset into the output file to start writing data, useful if working with the raw ROM.\n"
@@ -365,10 +365,10 @@ int main(int argc, char** argv)
 		cmd.parse(argc, argv);
 
 		std::vector<uint8_t> input;
-		std::size_t width = widthIn.getValue();
-		std::size_t height = heightIn.getValue();
-		std::size_t expected_input_size = 0;
-		std::unique_ptr<Tilemap2D> map2d;
+		uint32_t width = widthIn.getValue();
+		uint32_t height = heightIn.getValue();
+		uint32_t expected_input_size = 0;
+		std::unique_ptr<Landstalker::Tilemap2D> map2d;
 
 		validateParams(inputFormat.getValue(), inOffset, widthIn, heightIn, width, height);
 
