@@ -25,6 +25,10 @@ std::string format_filename(const std::string& name)
         {
             out += c;
         }
+        else if(c == '\'' || c == '"')
+        {
+            // skip
+        }
         else
         {
             out += '_';
@@ -41,6 +45,10 @@ std::string format_path(const std::string& name)
         if(std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '/')
         {
             out += c;
+        }
+        else if(c == '\'' || c == '"')
+        {
+            // skip
         }
         else
         {
@@ -487,6 +495,28 @@ void extract_script(const std::shared_ptr<Landstalker::GameData>& gd, const std:
     ofs << Landstalker::wstr_to_utf8(sd->GetScript()->ToYaml(gd));
 }
 
+void extract_script_funcs(const std::shared_ptr<Landstalker::GameData>& gd, const std::filesystem::path& outdir)
+{
+    auto sd = gd->GetScriptData();
+    if(!sd)
+    {
+        throw std::runtime_error("No script data available to extract script functions.");
+    }
+    auto script_funcs_dir = outdir / "data" / "script_functions";
+    std::filesystem::create_directories(script_funcs_dir);
+    auto save_yaml = [&](const std::string& filename, const std::string& name, std::shared_ptr<Landstalker::ScriptFunctionTable> scriptfunc)
+    {
+        std::cout << "Extracting " << name << " functions to: " << filename << std::endl;
+        std::ofstream ofs(script_funcs_dir / filename);
+        ofs << scriptfunc->ToYaml(name);
+    };
+    save_yaml("character_functions.yaml", "CharacterScript", sd->GetCharFuncs());
+    save_yaml("cutscene_functions.yaml", "CutsceneScript", sd->GetCutsceneFuncs());
+    save_yaml("shop_functions.yaml", "ShopScript", sd->GetShopFuncs());
+    save_yaml("item_functions.yaml", "ItemHandleScript", sd->GetItemFuncs());
+    save_yaml("progres_flags.yaml", "ProgressFlags", sd->GetProgressFlagsFuncs());
+}
+
 void extract_behaviours(const std::shared_ptr<Landstalker::GameData>& gd, const std::filesystem::path& outdir)
 {
     auto sd = gd->GetSpriteData();
@@ -504,10 +534,11 @@ void extract_behaviours(const std::shared_ptr<Landstalker::GameData>& gd, const 
     }
 }
 
-void extract_room_preview(const std::shared_ptr<Landstalker::Room>& room, const std::shared_ptr<Landstalker::GameData>& gd, const std::filesystem::path& outdir, const std::string& name)
+void extract_room_preview(const std::shared_ptr<Landstalker::Room>& room, const std::shared_ptr<Landstalker::GameData>& gd, const std::filesystem::path& outdir)
 {
     auto buf = Landstalker::ImageBuffer();
     auto rd = gd->GetRoomData();
+    static std::set<std::string> extracted_rooms;
     if(!rd)
     {
         throw std::runtime_error("No room data available to extract room preview.");
@@ -518,15 +549,24 @@ void extract_room_preview(const std::shared_ptr<Landstalker::Room>& room, const 
     auto blockset = rd->GetCombinedBlocksetForRoom(room->name);
     const auto ISO_BLOCK_WIDTH = tileset->GetData()->GetTileWidth() * Landstalker::MapBlock::GetBlockWidth();
     const auto ISO_BLOCK_HEIGHT = tileset->GetData()->GetTileHeight() * Landstalker::MapBlock::GetBlockHeight() / 2;
+    std::string fileprefix = format_filename(Landstalker::StrPrintf("%s_%s_%s_b%d%d", room->map.c_str(), palette->GetName().c_str(),
+                                                                    tileset->GetName().c_str(), room->pri_blockset, room->sec_blockset));
+
+    if(extracted_rooms.find(fileprefix) != extracted_rooms.end())
+    {
+        // Already extracted
+        return;
+    }
+    extracted_rooms.insert(fileprefix);
     buf.Resize(map->GetPixelWidth(), map->GetPixelHeight());
     buf.Insert3DMapLayer(0, 0, 0, Landstalker::Tilemap3D::Layer::BG, map, tileset->GetData(), blockset, false);
     buf.Insert3DMapLayer(0, 0, 0, Landstalker::Tilemap3D::Layer::FG, map, tileset->GetData(), blockset, false, std::nullopt, std::nullopt, Landstalker::ImageBuffer::BlockMode::NO_PRIORITY_ONLY);
-    buf.WritePNG((outdir / format_filename(name + "_preview_layer1.png")).string(), {palette->GetData()});
+    buf.WritePNG((outdir / format_filename(fileprefix + "_preview_layer1.png")).string(), {palette->GetData()});
     buf.Insert3DMapLayer(0, 0, 0, Landstalker::Tilemap3D::Layer::FG, map, tileset->GetData(), blockset, false, std::nullopt, std::nullopt, Landstalker::ImageBuffer::BlockMode::PRIORITY_ONLY);
-    buf.WritePNG((outdir / format_filename(name + "_preview_full.png")).string(), {palette->GetData()});
+    buf.WritePNG((outdir / format_filename(fileprefix + "_preview_full.png")).string(), {palette->GetData()});
     buf.Clear(0);
     buf.Insert3DMapLayer(0, 0, 0, Landstalker::Tilemap3D::Layer::FG, map, tileset->GetData(), blockset, false, std::nullopt, std::nullopt, Landstalker::ImageBuffer::BlockMode::PRIORITY_ONLY);
-    buf.WritePNG((outdir / format_filename(name + "_preview_layer2.png")).string(), {palette->GetData()});
+    buf.WritePNG((outdir / format_filename(fileprefix + "_preview_layer2.png")).string(), {palette->GetData()});
 }
 
 void extract_rooms(const std::shared_ptr<Landstalker::GameData>& gd, const std::filesystem::path& outdir)
@@ -537,7 +577,7 @@ void extract_rooms(const std::shared_ptr<Landstalker::GameData>& gd, const std::
         throw std::runtime_error("No room data available to extract rooms.");
     }
     auto rooms_dir = outdir / "data" / "rooms";
-    auto rooms_preview_dir = outdir / "graphics" / "rooms";
+    auto rooms_preview_dir = outdir / "graphics" / "room_maps";
     std::filesystem::create_directories(rooms_dir);
     std::filesystem::create_directories(rooms_preview_dir);
     for(std::size_t i = 0; i < rd->GetRoomCount(); ++i)
@@ -546,14 +586,12 @@ void extract_rooms(const std::shared_ptr<Landstalker::GameData>& gd, const std::
         const auto& name = Landstalker::wstr_to_utf8(room->GetDisplayName());
         std::cout << "Extracting room: " << name << std::endl;
         std::filesystem::path room_file = rooms_dir / format_path(name + ".yaml");
-        std::filesystem::path room_preview_file = rooms_preview_dir / format_path(name);
         std::filesystem::create_directories(room_file.parent_path());
-        std::filesystem::create_directories(room_preview_file.parent_path());
         {
             std::ofstream ofs(room_file);
             ofs << room->ToYaml(gd);
         }
-        extract_room_preview(room, gd, room_preview_file.parent_path(), room_preview_file.stem().string());
+        extract_room_preview(room, gd, rooms_preview_dir);
     }
 }
 
@@ -575,6 +613,7 @@ int main(int argc, char** argv)
         cmd.add(outpath);
 		cmd.parse(argc, argv);
         std::shared_ptr<Landstalker::GameData> gd = nullptr;
+        bool asmload = asmfile.isSet();
         if(labelsfile.isSet())
         {
             Landstalker::Labels::LoadData(labelsfile.getValue());
@@ -591,8 +630,8 @@ int main(int argc, char** argv)
         }
         else if(asmfile.isSet())
         {
-            gd = std::make_shared<Landstalker::GameData>(asmfile.getValue());
             std::cout << "Reading data from ASM: " << asmfile.getValue() << std::endl;
+            gd = std::make_shared<Landstalker::GameData>(asmfile.getValue());
         }
         else
         {
@@ -613,6 +652,7 @@ int main(int argc, char** argv)
         extract_sprites(gd, outdir);
         extract_strings(gd, outdir);
         extract_script(gd, outdir);
+        if(asmload) extract_script_funcs(gd, outdir);
         extract_behaviours(gd, outdir);
         extract_rooms(gd, outdir);
 	}            
