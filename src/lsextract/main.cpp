@@ -604,11 +604,14 @@ int main(int argc, char** argv)
 						   " - Written by LordMir, November 2025",
 						   ' ', XSTR(VERSION_MAJOR) "." XSTR(VERSION_MINOR) "." XSTR(VERSION_PATCH));
 
-		TCLAP::ValueArg<std::string> asmfile("a", "assembly", "Input ASM file to process", true, "", "assembly");
-		TCLAP::ValueArg<std::string> romfile("r", "rom", "Input ROM file to process", true, "", "rom");
+		TCLAP::ValueArg<std::string> asmfile("a", "assembly", "Input ASM file to process", false, "", "assembly");
+		TCLAP::ValueArg<std::string> romfile("r", "rom", "Input ROM file to process", false, "", "rom");
 		TCLAP::ValueArg<std::string> labelsfile("l", "labels", "Labels YAML file", false, "", "rom");
 		TCLAP::ValueArg<std::string> outpath("o", "output", "Output path for extracted files", false, "extracted", "output");
-		cmd.xorAdd(asmfile, romfile);
+        TCLAP::OneOf file_input;
+        file_input.add(asmfile);
+        file_input.add(romfile);
+        cmd.add(file_input);
         cmd.add(labelsfile);
         cmd.add(outpath);
 		cmd.parse(argc, argv);
