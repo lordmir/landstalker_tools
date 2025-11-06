@@ -11,9 +11,6 @@ SET_TARGET_PROPERTIES(${EXECUTABLE_NAME} PROPERTIES
 
 TARGET_INCLUDE_DIRECTORIES(${EXECUTABLE_NAME}
     PUBLIC ${PROJECT_BINARY_DIR}
-    PUBLIC ../common/include
-    PUBLIC ../third_party/tclap-1.2.2/include
-    PUBLIC ../third_party/rapidcsv-7.00/src
 )
 TARGET_LINK_LIBRARIES(${EXECUTABLE_NAME} landstalker)
 

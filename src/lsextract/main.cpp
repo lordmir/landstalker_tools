@@ -444,6 +444,10 @@ void extract_strings(const std::shared_ptr<Landstalker::GameData>& gd, const std
     std::filesystem::create_directories(script_dir);
     auto extract_strings = [&strings_dir, &strd](const std::string& filename, std::size_t count, auto get_string_func)
     {
+        if(count == 0)
+        {
+            return;
+        }
         std::ofstream f(strings_dir / filename);
         std::cout << "Extracting strings to: " << filename << std::endl;
         for(std::size_t i = 0; i < count; ++i)

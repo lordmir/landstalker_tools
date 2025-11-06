@@ -15,7 +15,6 @@ ENDIF()
 
 TARGET_INCLUDE_DIRECTORIES(${EXECUTABLE_NAME}
     PUBLIC ${PROJECT_BINARY_DIR}
-    PUBLIC ../third_party/tclap-1.2.2/include
 )
 TARGET_LINK_LIBRARIES(${EXECUTABLE_NAME} landstalker yaml-cpp::yaml-cpp)
 

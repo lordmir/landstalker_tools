@@ -13,6 +13,9 @@ add_subdirectory(modules/liblandstalker EXCLUDE_FROM_ALL)
 
 CONFIGURE_FILE(landstalker_tools.h.in landstalker_tools.h)
 
+SET(TCLAP_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/tclap/include")
+SET(RAPIDCSV_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/rapidcsv/src")
+INCLUDE_DIRECTORIES(${TCLAP_INCLUDE_DIR} ${RAPIDCSV_INCLUDE_DIR})
 ADD_SUBDIRECTORY(src)
 
 INCLUDE(InstallRequiredSystemLibraries)
