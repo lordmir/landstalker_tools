@@ -1,3 +1,9 @@
 [submodule "modules/liblandstalker"]
 	path = modules/liblandstalker
 	url = git@github.com:lordmir/liblandstalker.git
+[submodule "third_party/rapidcsv"]
+	path = third_party/rapidcsv
+	url = https://github.com/d99kris/rapidcsv.git
+[submodule "third_party/tclap"]
+	path = third_party/tclap
+	url = https://github.com/mirror/tclap.git

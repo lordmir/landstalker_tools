@@ -1,6 +1,7 @@
 build/
 install/
 bin/
+extracted/
 *.swp
 *.bak
 vs2019/Debug/
